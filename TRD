@@ -1,0 +1,526 @@
+📄 TECHNICAL REQUIREMENTS DOCUMENT (TRD)
+
+---
+
+# 🧠 1. SYSTEM OVERVIEW
+
+## 🎯 Purpose
+
+Build a backend system that:
+
+* Collects BTC 15-minute market data from Polymarket
+* Computes winning wallets
+* Stores daily results
+* Aggregates historical data
+* Serves leaderboard via API
+
+---
+
+## 🏗️ High-Level Architecture
+
+```text
+Polymarket → Fetcher → Processor → Database → API → Frontend
+```
+
+---
+
+# 🧩 2. SYSTEM COMPONENTS
+
+---
+
+## 2.1 Data Source Layer
+
+### Source:
+
+* Polymarket
+
+### Data Required:
+
+* Market question
+* Resolution outcome (YES / NO)
+* Market resolution timestamp
+* Wallet participation (positions)
+
+---
+
+## 2.2 Data Fetcher
+
+### File:
+
+```text
+/lib/fetcher.ts
+```
+
+### Responsibilities:
+
+* Fetch markets data
+* Filter:
+
+  * Resolved markets
+  * Last 24 hours
+
+---
+
+### Output Format:
+
+```json
+[
+  {
+    "question": "...",
+    "outcome": "YES",
+    "resolved_at": "timestamp",
+    "participants": [
+      {
+        "wallet": "0xabc",
+        "position": "YES"
+      }
+    ]
+  }
+]
+```
+
+---
+
+## 2.3 Filtering Module
+
+### Responsibilities:
+
+Filter markets based on:
+
+---
+
+### Asset Filter:
+
+```text
+BTC or Bitcoin
+```
+
+---
+
+### Interval Filter:
+
+```text
+"15 minutes"
+```
+
+---
+
+### Rule:
+
+```text
+If not clearly matching → skip
+```
+
+---
+
+---
+
+## 2.4 Processor (CORE ENGINE)
+
+### File:
+
+```text
+/lib/processor.ts
+```
+
+---
+
+### Responsibilities:
+
+* Evaluate each market
+* Determine win/loss
+* Aggregate wallet stats
+
+---
+
+### Core Logic:
+
+```text
+1 wallet = 1 result per market
+```
+
+---
+
+### Algorithm:
+
+For each market:
+
+1. Get final outcome
+2. Loop participants
+3. For each wallet:
+
+   * Compare position vs outcome
+   * If match → win
+
+---
+
+### Aggregation:
+
+```text
+wallet → wins, total_trades
+```
+
+---
+
+---
+
+## 2.5 Aggregation & Ranking
+
+---
+
+### Daily Ranking:
+
+* Sort by wins DESC
+* Limit 50
+
+---
+
+### Overall Ranking:
+
+* Sum wins across all dates
+* Sort DESC
+* Limit 100
+
+---
+
+---
+
+## 2.6 Database Layer
+
+---
+
+### Tech:
+
+* Supabase (PostgreSQL)
+
+---
+
+### Table: wallet_stats
+
+```sql
+wallet_address TEXT
+wins INT
+total_trades INT
+win_rate FLOAT
+date DATE
+```
+
+---
+
+### Constraints:
+
+```sql
+UNIQUE(wallet_address, date)
+```
+
+---
+
+### Index:
+
+```sql
+CREATE INDEX idx_date_wins 
+ON wallet_stats (date, wins DESC);
+```
+
+---
+
+---
+
+## 2.7 Data Storage Logic
+
+---
+
+### Daily Insert:
+
+* Insert new records for each wallet
+* Do NOT delete old data
+
+---
+
+### Upsert Logic:
+
+```text
+If wallet + date exists → update
+Else → insert
+```
+
+---
+
+---
+
+## 2.8 API Layer
+
+---
+
+### 1. Daily Leaderboard API
+
+```text
+GET /api/leaderboard
+```
+
+---
+
+### Logic:
+
+* Get latest date
+* Fetch top 50 wallets
+
+---
+
+### Query:
+
+```sql
+SELECT *
+FROM wallet_stats
+WHERE date = (SELECT MAX(date) FROM wallet_stats)
+ORDER BY wins DESC
+LIMIT 50;
+```
+
+---
+
+---
+
+### 2. Overall Leaderboard API
+
+```text
+GET /api/leaderboard/overall
+```
+
+---
+
+### Query:
+
+```sql
+SELECT 
+  wallet_address,
+  SUM(wins) AS total_wins,
+  SUM(total_trades) AS total_trades
+FROM wallet_stats
+GROUP BY wallet_address
+ORDER BY total_wins DESC
+LIMIT 100;
+```
+
+---
+
+---
+
+## 2.9 Cron System
+
+---
+
+### File:
+
+```text
+/scripts/cron-job.ts
+```
+
+---
+
+### Trigger:
+
+* Once daily (00:00 UTC)
+
+---
+
+### Flow:
+
+```text
+1. Fetch markets
+2. Filter BTC + 15m
+3. Process wallet stats
+4. Sort top 50
+5. Insert into DB (no delete)
+```
+
+---
+
+---
+
+## 2.10 Cron API Endpoint
+
+```text
+/api/cron
+```
+
+---
+
+### Responsibilities:
+
+* Trigger full pipeline
+* Return success/failure
+
+---
+
+---
+
+# 🔄 3. DATA FLOW
+
+---
+
+## End-to-End Flow
+
+```text
+Cron Trigger
+   ↓
+Fetch Markets
+   ↓
+Filter BTC + 15m
+   ↓
+Process Wins
+   ↓
+Aggregate Wallet Stats
+   ↓
+Store Daily Data
+   ↓
+API Query
+   ↓
+Frontend Display
+```
+
+---
+
+---
+
+# ⚡ 4. PERFORMANCE DESIGN
+
+---
+
+## Strategy:
+
+* Precompute daily data
+* Avoid real-time processing
+* Use indexed DB queries
+
+---
+
+## Expected Performance:
+
+* API response < 200ms
+* Page load < 1 second
+
+---
+
+---
+
+# 🔒 5. RELIABILITY & ERROR HANDLING
+
+---
+
+## Error Handling:
+
+* Try/catch for all fetch operations
+* Retry once on failure
+* Skip invalid markets
+
+---
+
+## Logging:
+
+```text
+Cron started
+Markets fetched: X
+Valid markets: X
+Wallets processed: X
+DB insert success
+```
+
+---
+
+---
+
+# 🧪 6. TESTING REQUIREMENTS
+
+---
+
+## Unit Tests:
+
+* Win calculation logic
+* Aggregation correctness
+
+---
+
+## Integration Tests:
+
+* API responses
+* DB queries
+
+---
+
+## Manual Validation:
+
+* Pick wallet
+* Compare with Polymarket
+
+---
+
+---
+
+# 📈 7. SCALABILITY
+
+---
+
+## Current:
+
+* Small dataset
+* Daily batch processing
+
+---
+
+## Future:
+
+* Add Redis caching
+* Add worker queues
+* Expand to ETH/SOL
+
+---
+
+---
+
+# 🧱 8. FOLDER STRUCTURE
+
+```bash
+/app
+  /api
+    /leaderboard
+    /leaderboard/overall
+    /cron
+
+/lib
+  fetcher.ts
+  processor.ts
+  db.ts
+
+/scripts
+  cron-job.ts
+```
+
+---
+
+---
+
+# 🏁 FINAL SUMMARY
+
+---
+
+## 🎯 System Type:
+
+```text
+Batch processing + analytics system
+```
+
+---
+
+## 🔑 Core Engine:
+
+```text
+Processor (win calculation logic)
+```
+
+---
+
+## 🧠 Key Principle:
+
+```text
+Accuracy > Speed > Features

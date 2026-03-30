@@ -1,0 +1,266 @@
+System Design Diagram + explanation** for:
+
+👉 **BTC 15m → Yesterday Top 50 + Overall Top 100**
+
+---
+
+# 🧠 HIGH-LEVEL SYSTEM DIAGRAM
+
+```text
+                ┌──────────────────────────┐
+                │  Polymarket (Data Source)│
+                └─────────────┬────────────┘
+                              │
+                              ▼
+                ┌──────────────────────────┐
+                │     Data Fetcher         │
+                │   (fetcher.ts)           │
+                └─────────────┬────────────┘
+                              │
+                              ▼
+                ┌──────────────────────────┐
+                │   Filtering Layer        │
+                │ BTC + 15m + Resolved     │
+                └─────────────┬────────────┘
+                              │
+                              ▼
+                ┌──────────────────────────┐
+                │     Processor            │
+                │ (win/loss calculation)   │
+                └─────────────┬────────────┘
+                              │
+                              ▼
+                ┌──────────────────────────┐
+                │     Aggregator           │
+                │ wallet → stats           │
+                └─────────────┬────────────┘
+                              │
+                              ▼
+                ┌──────────────────────────┐
+                │     Database             │
+                │ (Supabase/Postgres)      │
+                └─────────────┬────────────┘
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                             ▼
+   ┌──────────────────────┐      ┌──────────────────────┐
+   │ Daily Leaderboard API│      │ Overall Leaderboard  │
+   │ /api/leaderboard     │      │ /api/leaderboard/all │
+   └──────────┬───────────┘      └──────────┬───────────┘
+              │                             │
+              └──────────────┬──────────────┘
+                             ▼
+                ┌──────────────────────────┐
+                │       Frontend UI        │
+                │   (Next.js + Tailwind)  │
+                └──────────────────────────┘
+```
+
+---
+
+# 🔁 CRON FLOW (DATA PIPELINE)
+
+```text
+        ┌──────────────────────┐
+        │   Vercel Cron (24h)  │
+        └──────────┬───────────┘
+                   ▼
+        ┌──────────────────────┐
+        │     /api/cron        │
+        └──────────┬───────────┘
+                   ▼
+        Fetch → Filter → Process → Store
+```
+
+---
+
+# 🧠 COMPONENT EXPLANATION (SIMPLE)
+
+---
+
+## 🟢 1. DATA SOURCE
+
+👉 Polymarket
+
+Provides:
+
+* Markets
+* Outcomes
+* Wallet participation
+
+---
+
+## 🟡 2. FETCHER
+
+📁 `fetcher.ts`
+
+👉 Gets:
+
+* Last 24h markets
+* Only resolved
+
+---
+
+## 🔵 3. FILTERING LAYER
+
+👉 Keeps ONLY:
+
+```text
+BTC + "15 minutes"
+```
+
+❌ Removes everything else
+
+---
+
+## 🟣 4. PROCESSOR (CORE)
+
+📁 `processor.ts`
+
+👉 Does:
+
+```text
+Check: wallet prediction vs outcome
+```
+
+Rule:
+
+```text
+1 wallet = 1 result per market
+```
+
+---
+
+## 🟠 5. AGGREGATOR
+
+👉 Combines:
+
+```text
+wallet → wins, total_trades
+```
+
+---
+
+## 🔴 6. DATABASE
+
+👉 Supabase
+
+Stores:
+
+* Daily results
+* Historical data
+
+---
+
+## ⚙️ 7. APIs
+
+---
+
+### 🟢 Daily API
+
+```text
+/api/leaderboard
+```
+
+👉 Returns:
+
+* Yesterday top 50
+
+---
+
+### 🟣 Overall API
+
+```text
+/api/leaderboard/overall
+```
+
+👉 Returns:
+
+* All-time top 100
+
+---
+
+## 🎨 8. FRONTEND
+
+👉 Built with Next.js
+
+Shows:
+
+```text
+[ Daily Leaderboard ]
+[ Overall Leaderboard ]
+```
+
+---
+
+# 🔄 DATA FLOW (FULL)
+
+```text
+Polymarket
+   ↓
+Fetcher
+   ↓
+Filter (BTC + 15m)
+   ↓
+Processor (win/loss)
+   ↓
+Aggregator
+   ↓
+Database (store daily)
+   ↓
+API
+   ↓
+Frontend
+```
+
+---
+
+# ⚡ KEY DESIGN DECISIONS
+
+---
+
+## ✅ 1. Batch Processing
+
+* Runs once daily
+* Not real-time
+
+---
+
+## ✅ 2. No Data Deletion
+
+```text
+Data accumulates over time
+```
+
+---
+
+## ✅ 3. Precomputed Data
+
+* Fast API
+* No heavy computation
+
+---
+
+## ✅ 4. Separation of Concerns
+
+* Fetcher → gets data
+* Processor → computes
+* API → serves
+
+---
+
+# 🧠 SIMPLE MENTAL MODEL
+
+```text
+Collect → Filter → Compute → Store → Show
+```
+
+---
+
+# 🏁 FINAL SUMMARY
+
+👉 Your system is:
+
+```text
+A daily crypto analytics pipeline + leaderboard UI
+

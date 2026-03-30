@@ -1,0 +1,425 @@
+📄 PRODUCT REQUIREMENTS DOCUMENT (PRD)
+
+---
+
+# 🧠 1. PRODUCT OVERVIEW
+
+## 🏷️ Product Name
+
+**BTC15 Alpha (working name)**
+
+## 🔗 Data Source
+
+Built using data from Polymarket
+
+---
+
+## 🎯 Objective
+
+Build a simple web app that:
+
+* Tracks BTC 15-minute prediction markets
+* Identifies top-performing wallets
+* Displays:
+
+  * **Daily Top 50 wallets (last 24h / yesterday)**
+  * **Overall Top 100 wallets (all-time wins)**
+
+---
+
+## 🧩 Core Value
+
+```text
+Find the most accurate crypto traders in short-term BTC markets
+```
+
+---
+
+# 👤 2. TARGET USERS
+
+### Primary:
+
+* Crypto traders
+* Prediction market users
+
+### Secondary:
+
+* Analysts
+* Researchers
+
+---
+
+# ❗ 3. PROBLEM STATEMENT
+
+Users currently cannot:
+
+* Identify consistent winning wallets
+* Track high-frequency prediction performance
+* Access simple, reliable leaderboards
+
+---
+
+# 💡 4. SOLUTION
+
+A **dual leaderboard platform**:
+
+---
+
+## 🟢 1. DAILY LEADERBOARD
+
+```text
+Top 50 BTC 15m traders from last 24 hours
+```
+
+---
+
+## 🟣 2. OVERALL LEADERBOARD
+
+```text
+Top 100 traders based on total wins (all time)
+```
+
+---
+
+# 🧩 5. FEATURES
+
+---
+
+## 🏠 5.1 HOMEPAGE
+
+### Layout:
+
+```text
+[ Daily Leaderboard ]
+
+[ Overall Leaderboard ]
+```
+
+---
+
+## 🔹 5.2 DAILY LEADERBOARD
+
+### Title:
+
+```text
+Top BTC 15m Traders (Last 24 Hours)
+```
+
+---
+
+### Description:
+
+* Based on last 24 hours (rolling window)
+* Shows yesterday’s performance
+
+---
+
+### Table:
+
+| Rank | Wallet | Wins | Total Trades | Win % |
+
+---
+
+### Rules:
+
+* Only BTC markets
+* Only 15-minute markets
+* Only resolved markets
+* Top 50 wallets
+
+---
+
+---
+
+## 🔹 5.3 OVERALL LEADERBOARD
+
+### Title:
+
+```text
+Top Traders (All Time)
+```
+
+---
+
+### Description:
+
+* Aggregated performance across all stored data
+
+---
+
+### Table:
+
+| Rank | Wallet | Wins | Total Trades | Win % |
+
+---
+
+### Rules:
+
+* Sum wins across all dates
+* Top 100 wallets
+
+---
+
+---
+
+## 🔍 5.4 DATA DISPLAY
+
+### Wallet Address:
+
+* Shortened (0xabc...123)
+* Copy button
+
+---
+
+### Metrics:
+
+* Wins
+* Total trades
+* Win percentage
+
+---
+
+# ⚙️ 6. FUNCTIONAL REQUIREMENTS
+
+---
+
+## 📥 6.1 DATA COLLECTION
+
+System must:
+
+1. Fetch markets from Polymarket
+2. Filter:
+
+   * BTC only
+   * 15-minute markets
+   * Resolved markets
+   * Last 24 hours
+
+---
+
+## 🧠 6.2 MARKET FILTERING LOGIC
+
+A market is valid if:
+
+* Contains:
+
+  * “BTC” or “Bitcoin”
+  * “15 minutes”
+
+If unclear:
+
+```text
+Skip market
+```
+
+---
+
+## 🧮 6.3 WIN CALCULATION
+
+For each market:
+
+```text
+1 wallet = 1 result per market
+```
+
+---
+
+### Logic:
+
+* If prediction matches outcome → WIN
+* Else → LOSS
+
+---
+
+## 📊 6.4 AGGREGATION
+
+For each wallet:
+
+* Wins count
+* Total trades count
+* Win rate calculation
+
+---
+
+## 🏆 6.5 RANKING
+
+### Daily:
+
+* Sort by wins DESC
+* Top 50
+
+### Overall:
+
+* Sum wins across all dates
+* Sort DESC
+* Top 100
+
+---
+
+---
+
+## 🗄️ 6.6 DATA STORAGE
+
+System must:
+
+* Store daily results
+* NOT delete old data
+* Prevent duplicates
+
+---
+
+---
+
+## 🔁 6.7 DATA UPDATE
+
+### Frequency:
+
+* Once every 24 hours
+
+---
+
+### Logic:
+
+* Always recompute last 24h data
+* Insert new records
+
+---
+
+---
+
+# 🧱 7. NON-FUNCTIONAL REQUIREMENTS
+
+---
+
+## ⚡ Performance
+
+* Page load < 1 second
+* Fast API response
+
+---
+
+## 📈 Scalability
+
+* Support growing dataset
+* Efficient queries
+
+---
+
+## 🔒 Reliability
+
+* Accurate data
+* No duplicate records
+* Stable cron execution
+
+---
+
+## 🎨 UX
+
+* Clean UI
+* Minimal design
+* Mobile responsive
+
+---
+
+# 🧪 8. EDGE CASES
+
+---
+
+## ❗ Multiple trades per wallet
+
+👉 Count as ONE result
+
+---
+
+## ❗ Unclear markets
+
+👉 Skip
+
+---
+
+## ❗ No valid markets
+
+👉 Show:
+
+```text
+"No data available"
+```
+
+---
+
+## ❗ Low sample wallets
+
+👉 Optional:
+
+* Minimum trades filter (≥ 5)
+
+---
+
+# 📊 9. SUCCESS METRICS
+
+* Accuracy of leaderboard
+* User engagement
+* Data freshness
+* Performance speed
+
+---
+
+# 🚀 10. MVP SCOPE
+
+---
+
+## ✅ INCLUDE
+
+* Daily leaderboard
+* Overall leaderboard
+* Backend processing
+* Cron job
+* API
+* UI
+
+---
+
+## ❌ EXCLUDE
+
+* Multi-assets (ETH, SOL)
+* Real-time updates
+* Alerts
+* Social features
+
+---
+
+# 🔮 11. FUTURE FEATURES
+
+* ETH / SOL leaderboards
+* Real-time leaderboard
+* Wallet profile pages
+* Smart money signals
+* Notifications
+
+---
+
+# 🏁 FINAL SUMMARY
+
+---
+
+## 🎯 You are building:
+
+```text
+A high-accuracy crypto trader leaderboard
+```
+
+---
+
+## 💡 Core Strength:
+
+```text
+Simple + Focused + Data-driven
+```
+
+---
+
+## 🧠 Key Differentiator:
+
+```text
+BTC 15min precision tracking
+```

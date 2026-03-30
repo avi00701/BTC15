@@ -1,0 +1,255 @@
+BUILD PLAN (FINAL)
+Yes — what I gave you is the **updated (production-ready) version** of your build steps.
+But let me clean it up and give you the **final optimized version (v2)** so you can follow it without confusion.
+
+---
+
+# 🧠 FINAL BUILD FLOW (UPDATED VERSION v2)
+
+This is the **correct order used by real developers**:
+
+```text
+Local Build → GitHub → Vercel → Data Pipeline → Cron → Scale
+```
+
+---
+
+# 🟢 PART 1 — DAILY LEADERBOARD (UPDATED STEPS)
+
+---
+
+## 🪜 STEP 1 — Setup project (local)
+
+* Next.js + TypeScript + Tailwind
+* Run locally
+
+✅ Goal: basic app works
+
+---
+
+## 🪜 STEP 2 — INIT GITHUB (EARLY)
+
+Use GitHub
+
+```bash
+git init
+git add .
+git commit -m "init"
+git remote add origin <repo>
+git push -u origin main
+```
+
+✅ Why early?
+
+* Backup
+* Version control
+
+---
+
+## 🪜 STEP 3 — SETUP DATABASE
+
+Use Supabase
+
+Create:
+
+* wallet_stats table
+* unique constraint
+* index
+
+---
+
+## 🪜 STEP 4 — ENV SETUP (LOCAL)
+
+Create `.env.local`
+
+```text
+SUPABASE_URL=xxx
+SUPABASE_ANON_KEY=xxx
+```
+
+---
+
+## 🪜 STEP 5 — BUILD UI FIRST
+
+👉 Important strategy
+
+* Homepage
+* Table
+* Dummy data
+
+✅ UI ready before backend
+
+---
+
+## 🪜 STEP 6 — CREATE BASIC API
+
+```text
+/api/leaderboard
+```
+
+Return fake data
+
+---
+
+## 🪜 STEP 7 — PUSH TO GITHUB
+
+```bash
+git add .
+git commit -m "ui + api"
+git push
+```
+
+---
+
+## 🪜 STEP 8 — DEPLOY EARLY
+
+Use Vercel
+
+* Import repo
+* Deploy
+
+---
+
+## 🪜 STEP 9 — ADD ENV IN VERCEL
+
+Add:
+
+* SUPABASE_URL
+* SUPABASE_ANON_KEY
+
+👉 Redeploy
+
+---
+
+## 🪜 STEP 10 — VERIFY LIVE SITE
+
+* UI loads
+* API works
+
+---
+
+## 🪜 STEP 11 — BUILD DATA PIPELINE
+
+Now build:
+
+* fetcher.ts
+* processor.ts
+* cron-job.ts
+
+Test locally:
+
+```bash
+node scripts/cron-job.ts
+```
+
+---
+
+## 🪜 STEP 12 — CONNECT DB SAVE
+
+* Insert daily data
+* Use upsert
+* No delete
+
+---
+
+## 🪜 STEP 13 — UPDATE API
+
+Now return real data
+
+---
+
+## 🪜 STEP 14 — PUSH + AUTO DEPLOY
+
+```bash
+git add .
+git commit -m "backend working"
+git push
+```
+
+👉 Vercel auto deploys
+
+---
+
+## 🪜 STEP 15 — CREATE CRON API
+
+```text
+/api/cron
+```
+
+---
+
+## 🪜 STEP 16 — SET VERCEL CRON
+
+Schedule:
+
+```text
+0 0 * * *
+```
+
+(daily)
+
+---
+
+## 🪜 STEP 17 — TEST CRON
+
+* Trigger manually
+* Check DB
+
+---
+
+## 🧠 RESULT
+
+```text
+Daily leaderboard LIVE + auto updating ✅
+```
+
+---
+
+# 🟣 PART 2 — OVERALL LEADERBOARD (UPDATED STEPS)
+
+---
+
+## 🪜 STEP 18 — CREATE OVERALL API
+
+```text
+/api/leaderboard/overall
+```
+
+Add aggregation query
+
+---
+
+## 🪜 STEP 19 — UPDATE FRONTEND
+
+Add:
+
+```text
+Top Traders (All Time)
+```
+
+---
+
+## 🪜 STEP 20 — PUSH
+
+```bash
+git add .
+git commit -m "overall leaderboard"
+git push
+```
+
+---
+
+## 🪜 STEP 21 — VERIFY LIVE
+
+Check:
+
+* Daily leaderboard
+* Overall leaderboard
+
+---
+
+# 🧠 FINAL ARCHITECTURE 
+
+```text
+GitHub → Vercel → API → Supabase → Polymarket
+
