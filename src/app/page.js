@@ -561,29 +561,23 @@ export default function Home() {
             text-align: center;
           }
 
-          /* Compress table for mobile viewing */
+          /* Allow horizontal scroll for full table on mobile */
           .table-wrapper {
-            background: transparent;
-            border: none;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(38,38,38,0.3);
             padding: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
           }
           
           .leaderboard-table {
-            min-width: 100%;
+            min-width: 700px; /* Force minimum width to trigger scroll on small screens */
           }
           
           .leaderboard-table th,
           .leaderboard-table td {
-            padding: 12px 8px;
+            padding: 12px 16px;
             font-size: 12px;
-          }
-          
-          /* Hide Executions (4) and Last Win (6) to fit screens */
-          .leaderboard-table th:nth-child(4),
-          .leaderboard-table td:nth-child(4),
-          .leaderboard-table th:nth-child(6),
-          .leaderboard-table td:nth-child(6) { 
-            display: none; 
           }
           
           .rank-cell {
