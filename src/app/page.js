@@ -34,7 +34,7 @@ function getRankBadge(i) {
 
 function getWinRateColor(rate) {
   if (rate >= 70) return "#10B981"; // Neon Green
-  if (rate >= 50) return "#FFD700"; // Gold
+  if (rate >= 50) return "#2D45D8"; // Blue (Unified)
   return "#EF4444"; // Red
 }
 
@@ -133,22 +133,28 @@ export default function Home() {
   const [loadingOverall, setLoadingOverall] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [activeTab, setActiveTab] = useState("24h");
+  const [market, setMarket] = useState("btc_15m");
 
   const fetchAll = useCallback(async () => {
     setLoading24h(true);
     setLoadingOverall(true);
 
-    const [r24h, rOverall] = await Promise.all([
-      fetch("/api/leaderboard-24h").then((r) => r.json()).catch(() => []),
-      fetch("/api/leaderboard-overall").then((r) => r.json()).catch(() => []),
-    ]);
+    try {
+      const [r24h, rOverall] = await Promise.all([
+        fetch(`/api/leaderboard-24h?type=${market}`).then((r) => r.json()).catch(() => []),
+        fetch(`/api/leaderboard-overall?type=${market}`).then((r) => r.json()).catch(() => []),
+      ]);
 
-    setData24h(Array.isArray(r24h) ? r24h : []);
-    setDataOverall(Array.isArray(rOverall) ? rOverall : []);
-    setLoading24h(false);
-    setLoadingOverall(false);
-    setLastRefresh(new Date());
-  }, []);
+      setData24h(Array.isArray(r24h) ? r24h : []);
+      setDataOverall(Array.isArray(rOverall) ? rOverall : []);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading24h(false);
+      setLoadingOverall(false);
+      setLastRefresh(new Date());
+    }
+  }, [market]);
 
   useEffect(() => {
     fetchAll();
@@ -310,14 +316,14 @@ export default function Home() {
         }
         .hud-stat .value {
           font-size: 36px;
-          color: #FFD700;
+          color: #2D45D8;
           font-weight: 800;
           letter-spacing: -0.03em;
           position: relative;
           display: inline-block;
           width: fit-content;
           padding-bottom: 6px;
-          text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+          text-shadow: 0 0 20px rgba(45, 69, 216, 0.2);
         }
         .hud-stat .value::after {
           content: "";
@@ -369,6 +375,46 @@ export default function Home() {
         .tab-btn:hover:not(.active) {
           border-color: #2D45D8;
           color: #FFFFFF;
+        }
+
+        .market-tabs {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        .market-btn {
+          padding: 16px 32px;
+          border: 1px solid #262626;
+          background: #000;
+          color: #737373;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 14px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+        }
+        .market-btn::after {
+          content: "";
+          position: absolute;
+          bottom: 0; left: 0; width: 100%; height: 0;
+          background: #2D45D8;
+          transition: height 0.2s ease;
+        }
+        .market-btn.active {
+          color: #FFFFFF;
+          border-color: #2D45D8;
+          background: rgba(45, 69, 216, 0.05);
+          box-shadow: 0 0 20px rgba(45, 69, 216, 0.15);
+        }
+        .market-btn.active::after {
+          height: 3px;
+        }
+        .market-btn:hover:not(.active) {
+          border-color: #444;
+          color: #AAA;
         }
 
         /* ── Controls Row ── */
@@ -450,7 +496,7 @@ export default function Home() {
           font-size: 16px !important;
           font-weight: 800 !important;
           width: 80px;
-          color: #FFD700 !important;
+          color: #2D45D8 !important;
           letter-spacing: -0.05em;
         }
         
@@ -593,6 +639,16 @@ export default function Home() {
             font-size: 14px !important;
           }
           
+          .market-tabs {
+            flex-direction: column;
+            width: 100%;
+          }
+          
+          .market-btn {
+            width: 100%;
+            padding: 12px 16px;
+          }
+
           .winrate-badge {
              font-size: 13px;
           }
@@ -604,27 +660,49 @@ export default function Home() {
         <div className="header">
           <div className="sys-status">
             <span className="live-dot" />
-            DATALINK: ACTIVE // BTC 15-MIN
+            DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()}
           </div>
           <h1>Polymarket Leaderboard</h1>
           <p className="header-sub">
-            Track top tier operators across BTC prediction markets. Automatic synchronization every 15 cycles.
+            Track top tier operators across BTC prediction markets. Automatic synchronization every refreshing cycle.
           </p>
+        </div>
+
+        {/* Market Selection */}
+        <div className="market-tabs" style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+          <button
+            className={`market-btn ${market === "btc_15m" ? "active" : ""}`}
+            onClick={() => {
+              console.log("Switching to 15m");
+              setMarket("btc_15m");
+            }}
+          >
+            BTC 15 MIN
+          </button>
+          <button
+            className={`market-btn ${market === "btc_5m" ? "active" : ""}`}
+            onClick={() => {
+              console.log("Switching to 5m");
+              setMarket("btc_5m");
+            }}
+          >
+            BTC 5 MIN
+          </button>
         </div>
 
         {/* Stats bar */}
         <div className="stats-bar">
           <BracketBox className="hud-stat">
             <span className="label">Active Operators (24H)</span>
-            <span className="value">{data24h.length}</span>
+            <span className="value" style={{ color: '#2D45D8' }}>{data24h.length}</span>
           </BracketBox>
           <BracketBox className="hud-stat">
             <span className="label">Global Directory</span>
-            <span className="value">{dataOverall.length}</span>
+            <span className="value" style={{ color: '#2D45D8' }}>{dataOverall.length}</span>
           </BracketBox>
           <BracketBox className="hud-stat">
             <span className="label">Peak Win Rate</span>
-            <span className="value">
+            <span className="value" style={{ color: '#10B981' }}>
               {data24h.length > 0 ? `${(data24h[0]?.win_rate || 0).toFixed(1)}%` : "—"}
             </span>
           </BracketBox>
@@ -634,11 +712,11 @@ export default function Home() {
         <div className="controls-row">
           {lastRefresh && (
             <span className="refresh-info">
-              SYNCED {lastRefresh.toLocaleTimeString()}
+              LAST SYNC: {lastRefresh.toLocaleTimeString()}
             </span>
           )}
-          <button className="refresh-btn" onClick={fetchAll}>
-            [ FORCE SYNC ]
+          <button className="refresh-btn" onClick={fetchAll} disabled={loading24h}>
+            {loading24h ? "[ SCANNING... ]" : "[ FORCE REFRESH ]"}
           </button>
         </div>
 
@@ -659,8 +737,10 @@ export default function Home() {
         </div>
 
         {/* Data View */}
-        {activeTab === "24h" && <LeaderboardTable data={data24h} loading={loading24h} />}
-        {activeTab === "overall" && <LeaderboardTable data={dataOverall} loading={loadingOverall} />}
+        <div className="data-results">
+          {activeTab === "24h" && <LeaderboardTable data={data24h} loading={loading24h} />}
+          {activeTab === "overall" && <LeaderboardTable data={dataOverall} loading={loadingOverall} />}
+        </div>
       </div>
     </>
   );

@@ -62,29 +62,29 @@ async function processLeaderboard() {
       return;
     }
 
-    // 3. Filter for NEW trades and specifically BTC 15-Min markets
+    // 3. Filter for NEW trades and specifically BTC 15-Min OR 5-Min markets
     const newBtcTrades = allTrades.filter((t) => {
-      // Data API timestamps are in seconds (e.g., 1774952219)
       const tradeTimeIso = new Date(t.timestamp * 1000).toISOString();
       const isNew = lastTime === "0" ? true : new Date(tradeTimeIso) > new Date(lastTime);
       
       const title = (t.title || "").toLowerCase();
       const slug = (t.eventSlug || "").toLowerCase();
       const isBtc = title.includes("btc") || slug.includes("btc");
+      const is5m = title.includes("5") || slug.includes("5");
       const is15m = title.includes("15") || slug.includes("15");
-      return isNew && isBtc && is15m;
+      return isNew && isBtc && (is15m || is5m);
     });
 
-    if (lastTime === "0" && newBtcTrades.length > 200) {
-      newBtcTrades.length = 200; // Cap first run
+    if (lastTime === "0" && newBtcTrades.length > 300) {
+      newBtcTrades.length = 300; // Cap first run slightly higher for dual market
     }
 
     if (newBtcTrades.length === 0) {
-      console.log("[Pipeline] No new BTC 15m trades since last run.");
+      console.log("[Pipeline] No new BTC trades (5m/15m) since last run.");
       return;
     }
 
-    console.log(`[Pipeline] ${newBtcTrades.length} new BTC 15m trades to process.`);
+    console.log(`[Pipeline] ${newBtcTrades.length} new BTC trades to process.`);
 
     // 4. Resolve market outcomes by fetching event details for each unique slug
     const uniqueSlugs = [...new Set(newBtcTrades.map(t => t.eventSlug).filter(Boolean))];
@@ -119,32 +119,36 @@ async function processLeaderboard() {
     const tradeUpserts = [];
 
     newBtcTrades.forEach((trade) => {
-      // Data API fields: proxyWallet, conditionId, transactionHash, outcome
       const wallet = trade.proxyWallet || trade.user;
       const conditionId = trade.conditionId || trade.market_id;
       const id = trade.transactionHash || trade.id;
       const outcome = trade.outcome;
       
+      const title = (trade.title || "").toLowerCase();
+      const slug = (trade.eventSlug || "").toLowerCase();
+      const marketType = (title.includes("5") || slug.includes("5")) ? "btc_5m" : "btc_15m";
+
       if (!wallet || !id) return;
 
-      // Determine if they won (returns false if market is unresolved)
       const isWin = !!(marketWinners[conditionId] && marketWinners[conditionId] === outcome);
 
       tradeUpserts.push({
         id: id,
         wallet: wallet,
         market_id: conditionId,
+        market_type: marketType,
         outcome: outcome,
         is_win: isWin,
         timestamp: new Date(trade.timestamp * 1000).toISOString(),
       });
 
-      if (!usersBatch[wallet]) {
-        usersBatch[wallet] = { wallet, wins: 0, total_trades: 0 };
+      const statsKey = `${wallet}_${marketType}`;
+      if (!usersBatch[statsKey]) {
+        usersBatch[statsKey] = { wallet, market_type: marketType, wins: 0, total_trades: 0 };
       }
-      usersBatch[wallet].total_trades++;
+      usersBatch[statsKey].total_trades++;
       if (isWin) {
-        usersBatch[wallet].wins++;
+        usersBatch[statsKey].wins++;
       }
     });
 
@@ -159,12 +163,46 @@ async function processLeaderboard() {
       console.log(`[Pipeline] Saved ${tradeUpserts.length} indv. trade records.`);
     }
 
-    // 7. Atomic Bulk Increment (for all-time stats)
-    const updates = Object.values(usersBatch);
-    if (updates.length > 0) {
-      const { error: rpcError } = await supabase.rpc("increment_user_stats_bulk", { updates });
-      if (rpcError) throw rpcError;
-      console.log(`[Pipeline] Updated overall stats for ${updates.length} users.`);
+    // 7. Update user stats for specific market types
+    const statsList = Object.values(usersBatch);
+    if (statsList.length > 0) {
+      // Fetch current stats to avoid resetting totals since we're using a simple upsert logic for now
+      // A better way would be an RPC or atomic increment, but for a simple multi-market upsert to work properly, 
+      // we'll use a direct upsert which replaces the row.
+      const { data: currentStats } = await supabase
+        .from("users_stats")
+        .select("*")
+        .in("wallet", statsList.map(s => s.wallet));
+
+      const statsToUpsert = statsList.map(stat => {
+        const existing = (currentStats || []).find(c => c.wallet === stat.wallet && c.market_type === stat.market_type);
+        const totalWins = (existing?.wins || 0) + stat.wins;
+        const totalTrades = (existing?.total_trades || 0) + stat.total_trades;
+        
+        return {
+          wallet: stat.wallet,
+          market_type: stat.market_type,
+          wins: totalWins,
+          total_trades: totalTrades,
+          win_rate: totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0,
+          last_updated: new Date().toISOString()
+        };
+      });
+
+      console.log(`[Pipeline] Upserting unique stats for ${statsToUpsert.length} records`);
+
+      const { error: statsError } = await supabase
+        .from("users_stats")
+        .upsert(statsToUpsert, { 
+          onConflict: "wallet,market_type",
+          ignoreDuplicates: false 
+        });
+      
+      if (statsError) {
+        console.error("[Pipeline] Stats upsert failed:", JSON.stringify(statsError, null, 2));
+        throw new Error(`Stats Upsert Failure: ${statsError.message}`);
+      }
+      console.log(`[Pipeline] Updated multi-market stats successfully.`);
     }
 
     // 8. Save latest timestamp (Data API sorts newest first)
