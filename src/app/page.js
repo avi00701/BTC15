@@ -401,14 +401,7 @@ export default function Home() {
           overflow: visible;
         }
         
-        /* HUD Index on Button */
-        .market-btn::before {
-          content: attr(data-index);
-          font-size: 10px;
-          color: #2D45D8;
-          margin-right: 12px;
-          opacity: 0.5;
-        }
+        /* HUD Index on Button Removed per user request */
         
         .market-btn .btn-corners {
           position: absolute;
@@ -443,11 +436,6 @@ export default function Home() {
         .market-btn.active .btn-corners::after {
           border-color: #2D45D8;
           box-shadow: 0 0 10px rgba(45, 69, 216, 0.5);
-        }
-        
-        .market-btn.active::before {
-          opacity: 1;
-          text-shadow: 0 0 8px #2D45D8;
         }
 
         .market-btn:hover:not(.active) {
@@ -715,7 +703,6 @@ export default function Home() {
         <div className="market-tabs">
           <button
             className={`market-btn ${market === "btc_15m" ? "active" : ""}`}
-            data-index="01"
             onClick={() => {
               console.log("Switching to 15m");
               setMarket("btc_15m");
@@ -726,7 +713,6 @@ export default function Home() {
           </button>
           <button
             className={`market-btn ${market === "btc_5m" ? "active" : ""}`}
-            data-index="02"
             onClick={() => {
               console.log("Switching to 5m");
               setMarket("btc_5m");
