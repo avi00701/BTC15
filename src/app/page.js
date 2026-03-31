@@ -334,18 +334,11 @@ export default function Home() {
           flex-direction: column;
           gap: 12px;
           position: relative;
-          padding: 8px 0;
+          padding: 16px 0;
           transition: all 0.3s ease;
         }
         .hud-stat:hover {
-          transform: translateX(4px);
-        }
-        .hud-stat::before {
-          content: "[ LIVE.SYNC ]";
-          position: absolute;
-          top: -12px; left: 0; font-size: 8px; color: #10B981;
-          opacity: 0.3; letter-spacing: 1px;
-          font-weight: 800;
+          transform: translateY(-2px);
         }
         .hud-stat .label {
           font-size: 11px;
@@ -736,7 +729,6 @@ export default function Home() {
           <div className="sys-status">
             <span className="live-dot" />
             DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()}
-            <span style={{ marginLeft: '12px', opacity: 0.3, letterSpacing: '1px' }}>[ SEC: BTC-TRADES // VER: 4.2.0-A ]</span>
           </div>
           <h1>Polymarket Leaderboard</h1>
           <p className="header-sub">
