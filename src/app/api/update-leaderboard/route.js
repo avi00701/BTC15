@@ -17,7 +17,6 @@ export async function GET(req) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ✅ Respond instantly — no cron timeout ever
   processLeaderboard().catch((err) =>
     console.error("[Pipeline] Fatal error:", err.message)
   );
@@ -31,7 +30,7 @@ async function processLeaderboard() {
   try {
     console.log("[Pipeline] Started");
 
-    // 1. Get last processed timestamp
+    // 1. Get last timestamp
     const { data: meta } = await supabase
       .from("meta")
       .select("value")
@@ -41,10 +40,11 @@ async function processLeaderboard() {
     const lastTime = meta?.value || "0";
     console.log("[Pipeline] Last processed time:", lastTime);
 
-    // 2. Fetch recent trades (limited batch)
-    const tradesRes = await fetch("https://clob.polymarket.com/trades?limit=500", {
+    // 2. Fetch recent trades (max limit 1000) using public Data API
+    const tradesRes = await fetch("https://data-api.polymarket.com/trades?limit=1000", {
       headers: { Accept: "application/json" },
     });
+    
     if (!tradesRes.ok) throw new Error(`Trades API: ${tradesRes.status}`);
     const allTrades = await tradesRes.json();
 
@@ -53,80 +53,102 @@ async function processLeaderboard() {
       return;
     }
 
-    // 3. Filter: only new trades
-    const newTrades = lastTime === "0"
-      ? allTrades.slice(0, 200)
-      : allTrades.filter((t) => new Date(t.timestamp) > new Date(lastTime));
+    // 3. Filter for NEW trades and specifically BTC 15-Min markets
+    const newBtcTrades = allTrades.filter((t) => {
+      // Data API timestamps are in seconds (e.g., 1774952219)
+      const tradeTimeIso = new Date(t.timestamp * 1000).toISOString();
+      const isNew = lastTime === "0" ? true : new Date(tradeTimeIso) > new Date(lastTime);
+      
+      const isBtc = (t.title || "").toLowerCase().includes("btc");
+      const is15m = (t.title || "").includes("15");
+      return isNew && isBtc && is15m;
+    });
 
-    if (newTrades.length === 0) {
-      console.log("[Pipeline] No new trades since last run.");
+    if (lastTime === "0" && newBtcTrades.length > 200) {
+      newBtcTrades.length = 200; // Cap first run
+    }
+
+    if (newBtcTrades.length === 0) {
+      console.log("[Pipeline] No new BTC 15m trades since last run.");
       return;
     }
 
-    console.log(`[Pipeline] ${newTrades.length} new trades to process.`);
+    console.log(`[Pipeline] ${newBtcTrades.length} new BTC 15m trades to process.`);
 
-    // 4. Fetch markets and build winner map
-    const marketsRes = await fetch("https://clob.polymarket.com/markets?limit=500", {
-      headers: { Accept: "application/json" },
-    });
-    if (!marketsRes.ok) throw new Error(`Markets API: ${marketsRes.status}`);
-    const marketsData = await marketsRes.json();
-    const markets = Array.isArray(marketsData)
-      ? marketsData
-      : marketsData.markets || marketsData.data || [];
+    // 4. Resolve market outcomes by fetching event details for each unique slug
+    const uniqueSlugs = [...new Set(newBtcTrades.map(t => t.eventSlug).filter(Boolean))];
+    const marketWinners = {}; // Maps conditionId -> winning outcome
 
-    const marketMap = {};
-    markets.forEach((m) => {
-      const q = (m.question || "").toLowerCase();
-      if ((q.includes("btc") || q.includes("bitcoin")) && q.includes("15") && m.resolved && m.winning_outcome) {
-        marketMap[m.id] = m.winning_outcome;
+    console.log(`[Pipeline] Fetching resolutions for ${uniqueSlugs.length} unique events...`);
+    
+    await Promise.all(uniqueSlugs.map(async (slug) => {
+      try {
+        const evRes = await fetch(`https://gamma-api.polymarket.com/events?slug=${slug}`);
+        if (!evRes.ok) return;
+        const events = await evRes.json();
+        
+        if (events && events[0] && Array.isArray(events[0].markets)) {
+           const market = events[0].markets[0];
+           // market.winner is stringified array or missing. example: '["Up"]' or '"Up"'
+           if (market && market.conditionId && market.winner) {
+              let parsedWinner = market.winner;
+              try { parsedWinner = JSON.parse(market.winner)[0]; } catch(e) {}
+              marketWinners[market.conditionId] = parsedWinner;
+           }
+        }
+      } catch (err) {
+        console.error(`[Pipeline] Error fetching event ${slug}:`, err.message);
       }
-    });
+    }));
 
-    console.log(`[Pipeline] ${Object.keys(marketMap).length} resolved BTC 15m markets.`);
+    console.log(`[Pipeline] Found ${Object.keys(marketWinners).length} resolved markets in this batch.`);
 
-    // 5. Process trades — build per-user aggregation + individual trade records
+    // 5. Build Aggregation and Trades Upsert
     const usersBatch = {};
     const tradeUpserts = [];
 
-    newTrades.forEach((trade) => {
-      const wallet = trade.user || trade.maker || trade.taker;
-      const marketId = trade.market_id || trade.marketId;
-      if (!wallet || !trade.id) return;
+    newBtcTrades.forEach((trade) => {
+      // Data API fields: proxyWallet, conditionId, transactionHash, outcome
+      const wallet = trade.proxyWallet || trade.user;
+      const conditionId = trade.conditionId || trade.market_id;
+      const id = trade.transactionHash || trade.id;
+      const outcome = trade.outcome;
+      
+      if (!wallet || !id) return;
 
-      const isWin = !!(marketMap[marketId] && marketMap[marketId] === trade.outcome);
+      // Determine if they won (returns false if market is unresolved)
+      const isWin = !!(marketWinners[conditionId] && marketWinners[conditionId] === outcome);
 
-      // Build trade record for 24h leaderboard
       tradeUpserts.push({
-        id: trade.id,
-        wallet,
-        market_id: marketId,
-        outcome: trade.outcome,
+        id: id,
+        wallet: wallet,
+        market_id: conditionId,
+        outcome: outcome,
         is_win: isWin,
-        timestamp: trade.timestamp,
+        timestamp: new Date(trade.timestamp * 1000).toISOString(),
       });
 
-      // Aggregate for overall stats
       if (!usersBatch[wallet]) {
         usersBatch[wallet] = { wallet, wins: 0, total_trades: 0 };
       }
       usersBatch[wallet].total_trades++;
-      if (isWin) usersBatch[wallet].wins++;
+      if (isWin) {
+        usersBatch[wallet].wins++;
+      }
     });
 
-    // 6. Upsert individual trades (for 24h leaderboard)
+    // 6. Bulk Insert Trades (for 24h leaderboard)
     if (tradeUpserts.length > 0) {
-      // Batch into chunks of 100 to avoid request size limits
       const chunkSize = 100;
       for (let i = 0; i < tradeUpserts.length; i += chunkSize) {
         const chunk = tradeUpserts.slice(i, i + chunkSize);
         const { error } = await supabase.from("trades").upsert(chunk, { onConflict: "id" });
         if (error) console.error("[Pipeline] Trades insert error:", error.message);
       }
-      console.log(`[Pipeline] Saved ${tradeUpserts.length} trade records.`);
+      console.log(`[Pipeline] Saved ${tradeUpserts.length} indv. trade records.`);
     }
 
-    // 7. Atomic bulk increment for overall stats
+    // 7. Atomic Bulk Increment (for all-time stats)
     const updates = Object.values(usersBatch);
     if (updates.length > 0) {
       const { error: rpcError } = await supabase.rpc("increment_user_stats_bulk", { updates });
@@ -134,11 +156,15 @@ async function processLeaderboard() {
       console.log(`[Pipeline] Updated overall stats for ${updates.length} users.`);
     }
 
-    // 8. Save latest timestamp (trades sorted newest-first from CLOB)
-    const latestTimestamp = newTrades[0]?.timestamp;
+    // 8. Save latest timestamp (Data API sorts newest first)
+    const latestTimestamp = newBtcTrades[0]?.timestamp;
     if (latestTimestamp) {
-      await supabase.from("meta").upsert({ key: "last_processed_time", value: latestTimestamp });
-      console.log("[Pipeline] Timestamp saved:", latestTimestamp);
+      const nextTimestampIso = new Date(latestTimestamp * 1000).toISOString();
+      await supabase.from("meta").upsert({ 
+        key: "last_processed_time", 
+        value: nextTimestampIso 
+      });
+      console.log("[Pipeline] Timestamp saved:", nextTimestampIso);
     }
 
     console.log("[Pipeline] Complete ✅");
