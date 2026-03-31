@@ -5,10 +5,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export async function GET() {
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get("type") || "btc_15m";
+
   const { data, error } = await supabase
     .from("users_stats")
     .select("*")
+    .eq("market_type", type)
     .order("wins", { ascending: false })
     .limit(100);
 

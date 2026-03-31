@@ -379,42 +379,85 @@ export default function Home() {
 
         .market-tabs {
           display: flex;
-          gap: 16px;
-          margin-bottom: 24px;
+          gap: 20px;
+          margin-bottom: 32px;
+          flex-wrap: wrap;
         }
         .market-btn {
-          padding: 16px 32px;
-          border: 1px solid #262626;
-          background: #000;
-          color: #737373;
+          padding: 16px 28px;
+          border: 1px solid #1a1a1a;
+          background: rgba(45, 69, 216, 0.03);
+          color: #525252;
           font-weight: 800;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.15em;
           text-transform: uppercase;
           cursor: pointer;
           font-family: inherit;
-          font-size: 14px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-size: 13px;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
+          min-width: 200px;
+          text-align: left;
+          overflow: visible;
         }
-        .market-btn::after {
+        
+        /* HUD Index on Button */
+        .market-btn::before {
+          content: attr(data-index);
+          font-size: 10px;
+          color: #2D45D8;
+          margin-right: 12px;
+          opacity: 0.5;
+        }
+        
+        .market-btn .btn-corners {
+          position: absolute;
+          top: -1px; left: -1px; right: -1px; bottom: -1px;
+          pointer-events: none;
+        }
+        .market-btn .btn-corners::before,
+        .market-btn .btn-corners::after {
           content: "";
           position: absolute;
-          bottom: 0; left: 0; width: 100%; height: 0;
-          background: #2D45D8;
-          transition: height 0.2s ease;
+          width: 8px; height: 8px;
+          border: 0 solid transparent;
+          transition: border-color 0.3s, box-shadow 0.3s;
         }
+        
+        /* Top Left and Bottom Right Corners for HUD effect */
+        .market-btn .btn-corners::before {
+          top: 0; left: 0; border-top: 2px solid #262626; border-left: 2px solid #262626;
+        }
+        .market-btn .btn-corners::after {
+          bottom: 0; right: 0; border-bottom: 2px solid #262626; border-right: 2px solid #262626;
+        }
+
         .market-btn.active {
           color: #FFFFFF;
+          border-color: rgba(45, 69, 216, 0.5);
+          background: rgba(45, 69, 216, 0.1);
+          box-shadow: inset 0 0 20px rgba(45, 69, 216, 0.1);
+        }
+        
+        .market-btn.active .btn-corners::before,
+        .market-btn.active .btn-corners::after {
           border-color: #2D45D8;
-          background: rgba(45, 69, 216, 0.05);
-          box-shadow: 0 0 20px rgba(45, 69, 216, 0.15);
+          box-shadow: 0 0 10px rgba(45, 69, 216, 0.5);
         }
-        .market-btn.active::after {
-          height: 3px;
+        
+        .market-btn.active::before {
+          opacity: 1;
+          text-shadow: 0 0 8px #2D45D8;
         }
+
         .market-btn:hover:not(.active) {
+          border-color: #333;
+          color: #A3A3A3;
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .market-btn:hover .btn-corners::before,
+        .market-btn:hover .btn-corners::after {
           border-color: #444;
-          color: #AAA;
         }
 
         /* ── Controls Row ── */
@@ -669,23 +712,27 @@ export default function Home() {
         </div>
 
         {/* Market Selection */}
-        <div className="market-tabs" style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+        <div className="market-tabs">
           <button
             className={`market-btn ${market === "btc_15m" ? "active" : ""}`}
+            data-index="01"
             onClick={() => {
               console.log("Switching to 15m");
               setMarket("btc_15m");
             }}
           >
+            <div className="btn-corners" />
             BTC 15 MIN
           </button>
           <button
             className={`market-btn ${market === "btc_5m" ? "active" : ""}`}
+            data-index="02"
             onClick={() => {
               console.log("Switching to 5m");
               setMarket("btc_5m");
             }}
           >
+            <div className="btn-corners" />
             BTC 5 MIN
           </button>
         </div>
