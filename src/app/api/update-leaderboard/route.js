@@ -1,103 +1,149 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Use service role key for backend operations if available
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Node.js runtime - more stable, compatible with Supabase client
+export const runtime = "nodejs";
+// Prevents Vercel from killing the function after response is sent
+export const maxDuration = 60;
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 export async function GET(req) {
+  const auth = req.headers.get("authorization");
+
+  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ✅ Fire and forget — respond INSTANTLY, process in background
+  // Node.js will keep the event loop alive until processLeaderboard() finishes
+  processLeaderboard().catch((err) =>
+    console.error("Background pipeline failed:", err.message)
+  );
+
+  return NextResponse.json({ started: true, message: "Processing in background" });
+}
+
+// 🔥 Scalable incremental background processing
+async function processLeaderboard() {
+  const supabase = getSupabase();
+
   try {
-    // 🔐 Security
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    console.log("[Pipeline] Started");
+
+    // 1. Get last processed timestamp
+    const { data: meta } = await supabase
+      .from("meta")
+      .select("value")
+      .eq("key", "last_processed_time")
+      .single();
+
+    const lastTime = meta?.value || "0";
+    console.log("[Pipeline] Last processed time:", lastTime);
+
+    // 2. Fetch only recent trades (max 500)
+    const tradesRes = await fetch("https://clob.polymarket.com/trades?limit=500", {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!tradesRes.ok) {
+      throw new Error(`Trades API error: ${tradesRes.status}`);
     }
 
-    console.log("Cron started: Updating leaderboard via Data API...");
-
-    // 1. Fetch latest trades from public Data API
-    // The Data API /trades endpoint returns recent trades across all markets.
-    // We can fetch a larger batch to get better coverage.
-    const tradesRes = await fetch("https://data-api.polymarket.com/trades?limit=1000");
-    if (!tradesRes.ok) throw new Error("Failed to fetch trades from Data API");
     const trades = await tradesRes.json();
 
-    console.log(`Fetched ${trades.length} recent trades from Polymarket`);
-
-    // 2. Filter for BTC 15-minute markets based on the title
-    // Typical title: "Bitcoin Up or Down - March 30, 12:15 PM – 12:30 PM ET"
-    const filteredTrades = trades.filter(t => {
-      const title = t.title?.toLowerCase() || "";
-      // We look for Bitcoin and something that implies the 15-minute intervals
-      // Usually these titles have a time range like "12:15 PM – 12:30 PM"
-      return (title.includes("bitcoin") || title.includes("btc")) && 
-             (title.includes("15m") || title.includes("up or down"));
-    });
-
-    console.log(`Processing ${filteredTrades.length} BTC Up/Down trades`);
-
-    if (filteredTrades.length === 0) {
-      return NextResponse.json({ 
-        success: true, 
-        message: "No BTC 15m trades found in the latest 1000 trades.",
-        processed: 0 
-      });
+    if (!Array.isArray(trades) || trades.length === 0) {
+      console.log("[Pipeline] No trades returned from API.");
+      return;
     }
 
-    // 3. Process user statistics
-    const users = {};
+    // 3. Filter: only trades newer than last run
+    const newTrades = lastTime === "0"
+      ? trades.slice(0, 200) // First ever run: only take 200 most recent
+      : trades.filter((t) => new Date(t.timestamp) > new Date(lastTime));
 
-    filteredTrades.forEach(trade => {
-      const wallet = trade.proxyWallet || trade.user; // Data API uses proxyWallet
+    if (newTrades.length === 0) {
+      console.log("[Pipeline] No new trades since last run.");
+      return;
+    }
+
+    console.log(`[Pipeline] Processing ${newTrades.length} new trades.`);
+
+    // 4. Fetch markets to find resolved BTC 15-min markets
+    const marketsRes = await fetch("https://clob.polymarket.com/markets?limit=500", {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!marketsRes.ok) {
+      throw new Error(`Markets API error: ${marketsRes.status}`);
+    }
+
+    const marketsData = await marketsRes.json();
+    const markets = Array.isArray(marketsData)
+      ? marketsData
+      : marketsData.markets || marketsData.data || [];
+
+    // 5. Build winning outcome map for resolved BTC 15m markets
+    const btcMarketWinners = {};
+    markets.forEach((m) => {
+      const q = (m.question || "").toLowerCase();
+      const isBTC = q.includes("btc") || q.includes("bitcoin");
+      const is15Min = q.includes("15");
+      if (isBTC && is15Min && m.resolved && m.winning_outcome) {
+        btcMarketWinners[m.id] = m.winning_outcome;
+      }
+    });
+
+    console.log(`[Pipeline] Found ${Object.keys(btcMarketWinners).length} resolved BTC 15m markets.`);
+
+    // 6. Aggregate user stats from this batch
+    const usersBatch = {};
+    newTrades.forEach((trade) => {
+      const wallet = trade.user || trade.maker || trade.taker;
+      const marketId = trade.market_id || trade.marketId;
       if (!wallet) return;
 
-      const userKey = wallet.toLowerCase();
-      if (!users[userKey]) {
-        users[userKey] = { wins: 0, totalTrades: 0, name: trade.name || trade.pseudonym || null };
+      if (!usersBatch[wallet]) {
+        usersBatch[wallet] = { wallet, wins: 0, total_trades: 0 };
       }
 
-      users[userKey].totalTrades++;
+      usersBatch[wallet].total_trades++;
 
-      // In a real production scenario, we would check the outcome vs winner.
-      // For the 15m markets, they resolve quickly. 
-      // We'll increment 'wins' if the trade side was correct (mock logic if needed, or based on price 1.0)
-      // Actually, if the trade price is 1.0 or very high in the historical trades, they might be winners.
-      // For now, we follow the user's logic of counting trades and assigning a proportional win-rate 
-      // or using the tokens data if we had it.
-      
-      // Let's assume a 55% win rate for now as a baseline if we can't verify individual resolution immediately
-      // OR better: count the number of trades. ELITE traders have high volume.
-      users[userKey].wins = Math.floor(users[userKey].totalTrades * (0.45 + Math.random() * 0.2)); 
+      if (btcMarketWinners[marketId] && btcMarketWinners[marketId] === trade.outcome) {
+        usersBatch[wallet].wins++;
+      }
     });
 
-    // 4. Upsert to Supabase
-    const userEntries = Object.entries(users);
-    for (const [wallet, data] of userEntries) {
-      const winRate = data.totalTrades > 0
-        ? (data.wins / data.totalTrades) * 100
-        : 0;
+    const updates = Object.values(usersBatch);
+    console.log(`[Pipeline] Updating ${updates.length} users.`);
 
-      const { error } = await supabase.from("users_stats").upsert({
-        wallet: wallet,
-        wins: data.wins,
-        total_trades: data.totalTrades,
-        win_rate: parseFloat(winRate.toFixed(2)),
-        last_updated: new Date().toISOString()
-      }, { onConflict: 'wallet' });
-
-      if (error) console.error(`Error upserting ${wallet}:`, error.message);
+    // 7. Atomic bulk increment (preserves existing data, adds new wins)
+    if (updates.length > 0) {
+      const { error: rpcError } = await supabase.rpc("increment_user_stats_bulk", {
+        updates,
+      });
+      if (rpcError) throw rpcError;
+      console.log(`[Pipeline] DB updated for ${updates.length} users.`);
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      processed: userEntries.length,
-      tradesEvaluated: filteredTrades.length
-    });
+    // 8. Save the timestamp of the most recent trade processed
+    // Trades from CLOB are sorted newest first
+    const latestTimestamp = newTrades[0]?.timestamp;
+    if (latestTimestamp) {
+      await supabase.from("meta").upsert({
+        key: "last_processed_time",
+        value: latestTimestamp,
+      });
+      console.log("[Pipeline] Timestamp saved:", latestTimestamp);
+    }
 
+    console.log("[Pipeline] Complete ✅");
   } catch (err) {
-    console.error("Update leaderboard failed:", err);
-    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+    console.error("[Pipeline] ERROR:", err.message);
   }
 }
