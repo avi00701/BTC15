@@ -178,7 +178,7 @@ export default function Home() {
           border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-          background: #9D4EDD;
+          background: #2D45D8;
         }
 
         body {
@@ -268,9 +268,9 @@ export default function Home() {
           border: 1px solid rgba(38, 38, 38, 0.3);
         }
         .bracket-box:hover {
-          background: rgba(157, 78, 221, 0.02);
-          border-color: rgba(157, 78, 221, 0.2);
-          box-shadow: inset 0 0 20px rgba(157, 78, 221, 0.05), 0 0 15px rgba(157, 78, 221, 0.1);
+          background: rgba(45, 69, 216, 0.02);
+          border-color: rgba(45, 69, 216, 0.2);
+          box-shadow: inset 0 0 20px rgba(45, 69, 216, 0.05), 0 0 15px rgba(45, 69, 216, 0.1);
         }
         .bracket-box .corner {
           position: absolute;
@@ -280,8 +280,8 @@ export default function Home() {
           transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .bracket-box:hover .corner {
-          border-color: #9D4EDD;
-          box-shadow: 0 0 10px rgba(157, 78, 221, 0.3);
+          border-color: #2D45D8;
+          box-shadow: 0 0 10px rgba(45, 69, 216, 0.3);
         }
         .bracket-box .tl { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
         .bracket-box .tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
@@ -326,7 +326,7 @@ export default function Home() {
           left: 0;
           width: 100%;
           height: 3px;
-          background: linear-gradient(90deg, #9D4EDD, transparent);
+          background: linear-gradient(90deg, #2D45D8, transparent);
         }
 
         /* ── Tabs ── */
@@ -359,15 +359,15 @@ export default function Home() {
         }
         .tab-btn.active {
           color: #FFFFFF;
-          border-color: rgba(157, 78, 221, 0.4);
-          background: rgba(157, 78, 221, 0.1);
+          border-color: rgba(45, 69, 216, 0.4);
+          background: rgba(45, 69, 216, 0.1);
         }
         .tab-btn.active::before {
-          background: #9D4EDD;
-          box-shadow: 0 0 10px #9D4EDD;
+          background: #2D45D8;
+          box-shadow: 0 0 10px #2D45D8;
         }
         .tab-btn:hover:not(.active) {
-          border-color: #9D4EDD;
+          border-color: #2D45D8;
           color: #FFFFFF;
         }
 
@@ -388,7 +388,7 @@ export default function Home() {
         .refresh-btn {
           background: transparent;
           border: 1px solid #262626;
-          color: #9D4EDD;
+          color: #2D45D8;
           font-family: inherit;
           font-size: 11px;
           font-weight: 700;
@@ -399,9 +399,9 @@ export default function Home() {
           transition: all 0.2s;
         }
         .refresh-btn:hover {
-          border-color: #9D4EDD;
-          box-shadow: inset 0 0 10px rgba(157, 78, 221, 0.2);
-          text-shadow: 0 0 5px rgba(157, 78, 221, 0.5);
+          border-color: #2D45D8;
+          box-shadow: inset 0 0 10px rgba(45, 69, 216, 0.2);
+          text-shadow: 0 0 5px rgba(45, 69, 216, 0.5);
         }
 
         /* ── Table ── */
@@ -435,7 +435,7 @@ export default function Home() {
           border-bottom: 1px solid #1a1a1a;
         }
         .table-row:hover { 
-          background: rgba(157, 78, 221, 0.05); 
+          background: rgba(45, 69, 216, 0.05); 
         }
         .table-row:hover td {
           color: #FFFFFF;
@@ -469,7 +469,7 @@ export default function Home() {
           gap: 8px;
           transition: color 0.2s;
         }
-        .wallet-link:hover { color: #9D4EDD; }
+        .wallet-link:hover { color: #2D45D8; }
         .ext-icon { font-size: 10px; color: #737373; }
         
         .wins-badge {
@@ -508,7 +508,7 @@ export default function Home() {
           content: "";
           position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
-          background: linear-gradient(90deg, transparent, rgba(157, 78, 221, 0.1), transparent);
+          background: linear-gradient(90deg, transparent, rgba(45, 69, 216, 0.1), transparent);
           transform: translateX(-100%);
           animation: scanline 2s infinite linear;
         }
