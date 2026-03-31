@@ -17,11 +17,20 @@ export async function GET(req) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  processLeaderboard().catch((err) =>
-    console.error("[Pipeline] Fatal error:", err.message)
-  );
-
-  return NextResponse.json({ started: true });
+  try {
+    const result = await processLeaderboard();
+    return NextResponse.json({ 
+      success: true, 
+      processed: result?.count || 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("[Pipeline] Fatal error:", err.message);
+    return NextResponse.json({ 
+      success: false, 
+      error: err.message 
+    }, { status: 500 });
+  }
 }
 
 async function processLeaderboard() {
@@ -168,7 +177,9 @@ async function processLeaderboard() {
     }
 
     console.log("[Pipeline] Complete ✅");
+    return { count: newBtcTrades.length };
   } catch (err) {
     console.error("[Pipeline] ERROR:", err.message);
+    throw err; // Rethrow to catch in GET handler
   }
 }
