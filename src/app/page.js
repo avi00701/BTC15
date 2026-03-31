@@ -26,48 +26,63 @@ function formatTime(date) {
 }
 
 function getRankBadge(i) {
-  if (i === 0) return "🥇";
-  if (i === 1) return "🥈";
-  if (i === 2) return "🥉";
-  return `#${i + 1}`;
+  if (i === 0) return "01";
+  if (i === 1) return "02";
+  if (i === 2) return "03";
+  return (i + 1).toString().padStart(2, "0");
 }
 
 function getWinRateColor(rate) {
-  if (rate >= 70) return "#22c55e";
-  if (rate >= 50) return "#eab308";
-  return "#ef4444";
+  if (rate >= 70) return "#10B981"; // Neon Green
+  if (rate >= 50) return "#FFD700"; // Gold
+  return "#EF4444"; // Red
+}
+
+// ─── HUD Components ───────────────────────────────────────────────────────────
+function BracketBox({ children, className = "" }) {
+  return (
+    <div className={`bracket-box ${className}`}>
+      <div className="corner tl" />
+      <div className="corner tr" />
+      <div className="corner bl" />
+      <div className="corner br" />
+      {children}
+    </div>
+  );
 }
 
 // ─── Table Component ──────────────────────────────────────────────────────────
 function LeaderboardTable({ data, loading }) {
   if (loading) {
     return (
-      <div className="table-skeleton">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="skeleton-row" style={{ animationDelay: `${i * 0.1}s` }} />
-        ))}
-      </div>
+      <BracketBox className="table-wrapper">
+        <div className="table-skeleton">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="skeleton-row" style={{ animationDelay: `${i * 0.1}s` }} />
+          ))}
+        </div>
+      </BracketBox>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="empty-state">
-        <span className="empty-icon">📊</span>
-        <p>No data yet — waiting for next cron run</p>
-      </div>
+      <BracketBox className="empty-state">
+        <span className="empty-icon">SYS_WAIT</span>
+        <p>AWAITING DATA FROM DATALINK // CRON CYCLE PENDING</p>
+      </BracketBox>
     );
   }
 
   return (
-    <div className="table-wrapper">
+    <BracketBox className="table-wrapper">
       <table className="leaderboard-table">
         <thead>
           <tr>
             <th>Rank</th>
-            <th>Profile</th>
+            <th>Operator</th>
             <th>Wins</th>
-            <th>Trades</th>
+            <th>Executions</th>
             <th>Win %</th>
             <th>Last Win</th>
           </tr>
@@ -104,7 +119,7 @@ function LeaderboardTable({ data, loading }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </BracketBox>
   );
 }
 
@@ -135,330 +150,408 @@ export default function Home() {
 
   useEffect(() => {
     fetchAll();
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchAll, 5 * 60 * 1000);
+    const interval = setInterval(fetchAll, 5 * 60 * 1000); // 5 minutes
     return () => clearInterval(interval);
   }, [fetchAll]);
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-          font-family: 'Inter', sans-serif;
-          background: #08090a;
-          color: #e8eaed;
+          font-family: 'Space Grotesk', monospace, sans-serif;
+          background-color: #000000;
+          /* The Technical Grid */
+          background-image: 
+            linear-gradient(#121212 1px, transparent 1px),
+            linear-gradient(90deg, #121212 1px, transparent 1px);
+          background-size: 32px 32px;
+          background-attachment: fixed;
+          color: #FFFFFF;
           min-height: 100vh;
+          -webkit-font-smoothing: antialiased;
         }
 
         /* ── Layout ── */
         .page-wrapper {
-          max-width: 1100px;
+          max-width: 1200px;
           margin: 0 auto;
-          padding: 40px 20px 80px;
+          padding: 48px 24px 80px;
         }
 
         /* ── Header ── */
         .header {
-          text-align: center;
-          margin-bottom: 40px;
+          margin-bottom: 48px;
+          text-align: left;
+          position: relative;
         }
-        .header-eyebrow {
+        
+        .sys-status {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
           font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.12em;
+          font-weight: 700;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: #f59e0b;
-          background: rgba(245,158,11,0.1);
-          padding: 6px 14px;
-          border-radius: 20px;
-          border: 1px solid rgba(245,158,11,0.25);
-          margin-bottom: 18px;
-        }
-        .live-dot {
-          width: 7px;
-          height: 7px;
-          background: #22c55e;
-          border-radius: 50%;
-          animation: pulse 1.5s ease-in-out infinite;
-        }
-        @keyframes pulse {
-          0%,100% { opacity:1; transform:scale(1); }
-          50% { opacity:0.4; transform:scale(1.4); }
-        }
-        .header h1 {
-          font-size: clamp(28px, 5vw, 44px);
-          font-weight: 800;
-          background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 40%, #fff 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          line-height: 1.15;
-          margin-bottom: 12px;
-        }
-        .header-sub {
-          font-size: 15px;
-          color: #6b7280;
-          max-width: 420px;
-          margin: 0 auto;
-          line-height: 1.5;
+          color: #10B981;
+          margin-bottom: 16px;
+          padding: 8px 16px;
+          background: rgba(16, 185, 129, 0.05);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
         }
 
-        /* ── Stats bar ── */
+        .live-dot {
+          width: 8px;
+          height: 8px;
+          background: #10B981;
+          border-radius: 50%;
+          box-shadow: 0 0 8px #10B981;
+          animation: pulse-green 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-green {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .header h1 {
+          font-size: clamp(36px, 6vw, 56px);
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: -0.04em;
+          color: #FFFFFF;
+          margin-bottom: 12px;
+          text-shadow: 0 0 30px rgba(255,255,255,0.1);
+        }
+
+        .header-sub {
+          font-size: 14px;
+          color: #737373;
+          max-width: 600px;
+          line-height: 1.6;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
+        }
+
+        /* ── Bracket HUD Component ── */
+        .bracket-box {
+          position: relative;
+          padding: 24px;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
+          transition: all 0.3s ease;
+          border: 1px solid rgba(38, 38, 38, 0.3);
+        }
+        .bracket-box:hover {
+          background: rgba(157, 78, 221, 0.02);
+          border-color: rgba(157, 78, 221, 0.2);
+          box-shadow: inset 0 0 20px rgba(157, 78, 221, 0.05), 0 0 15px rgba(157, 78, 221, 0.1);
+        }
+        .bracket-box .corner {
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          border: 0 solid #262626;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .bracket-box:hover .corner {
+          border-color: #9D4EDD;
+          box-shadow: 0 0 10px rgba(157, 78, 221, 0.3);
+        }
+        .bracket-box .tl { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+        .bracket-box .tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
+        .bracket-box .bl { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; }
+        .bracket-box .br { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+
+        /* ── Stats Bar ── */
         .stats-bar {
-          display: flex;
-          justify-content: center;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 24px;
-          flex-wrap: wrap;
-          margin-bottom: 36px;
+          margin-bottom: 48px;
         }
-        .stat-chip {
+        
+        .hud-stat {
           display: flex;
-          align-items: center;
-          gap: 8px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 10px;
-          padding: 10px 18px;
-          font-size: 13px;
+          flex-direction: column;
+          gap: 12px;
         }
-        .stat-chip .label { color: #6b7280; }
-        .stat-chip .value { font-weight: 700; color: #f59e0b; }
+        .hud-stat .label {
+          font-size: 11px;
+          color: #737373;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          font-weight: 600;
+        }
+        .hud-stat .value {
+          font-size: 36px;
+          color: #FFD700;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          position: relative;
+          display: inline-block;
+          width: fit-content;
+          padding-bottom: 6px;
+          text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+        .hud-stat .value::after {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: linear-gradient(90deg, #9D4EDD, transparent);
+        }
 
         /* ── Tabs ── */
         .tabs {
           display: flex;
-          gap: 4px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 12px;
-          padding: 4px;
-          margin-bottom: 28px;
-          width: fit-content;
+          gap: 12px;
+          margin-bottom: 32px;
         }
         .tab-btn {
-          padding: 10px 24px;
-          border-radius: 8px;
-          border: none;
+          padding: 12px 24px;
+          border: 1px solid #262626;
+          background: rgba(0, 0, 0, 0.5);
+          color: #737373;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
           cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          font-family: 'Inter', sans-serif;
+          font-family: inherit;
           transition: all 0.2s ease;
-          color: #6b7280;
+          position: relative;
+          overflow: hidden;
+        }
+        .tab-btn::before {
+          content: "";
+          position: absolute;
+          top: 0; left: 0; width: 2px; height: 100%;
           background: transparent;
+          transition: background 0.2s;
         }
         .tab-btn.active {
-          background: linear-gradient(135deg, #d97706, #f59e0b);
-          color: #08090a;
+          color: #FFFFFF;
+          border-color: rgba(157, 78, 221, 0.4);
+          background: rgba(157, 78, 221, 0.1);
+        }
+        .tab-btn.active::before {
+          background: #9D4EDD;
+          box-shadow: 0 0 10px #9D4EDD;
         }
         .tab-btn:hover:not(.active) {
-          color: #e8eaed;
-          background: rgba(255,255,255,0.06);
+          border-color: #9D4EDD;
+          color: #FFFFFF;
         }
 
-        /* ── Section title ── */
-        .section-header {
+        /* ── Controls Row ── */
+        .controls-row {
           display: flex;
+          justify-content: flex-end;
           align-items: center;
-          justify-content: space-between;
+          gap: 16px;
           margin-bottom: 16px;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-        .section-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: #f3f4f6;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .section-badge {
-          font-size: 11px;
-          font-weight: 600;
-          padding: 3px 10px;
-          border-radius: 20px;
-          background: rgba(245,158,11,0.15);
-          color: #f59e0b;
-          border: 1px solid rgba(245,158,11,0.2);
         }
         .refresh-info {
-          font-size: 12px;
-          color: #4b5563;
+          font-size: 11px;
+          color: #737373;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
         }
-
-        /* ── Refresh button ── */
         .refresh-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
+          background: transparent;
+          border: 1px solid #262626;
+          color: #9D4EDD;
+          font-family: inherit;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
           padding: 8px 16px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(255,255,255,0.04);
-          color: #9ca3af;
           cursor: pointer;
-          font-size: 13px;
-          font-family: 'Inter', sans-serif;
           transition: all 0.2s;
         }
         .refresh-btn:hover {
-          background: rgba(255,255,255,0.08);
-          color: #e8eaed;
+          border-color: #9D4EDD;
+          box-shadow: inset 0 0 10px rgba(157, 78, 221, 0.2);
+          text-shadow: 0 0 5px rgba(157, 78, 221, 0.5);
         }
 
         /* ── Table ── */
         .table-wrapper {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          overflow: hidden;
+          padding: 0 !important;
+          overflow-x: auto;
         }
         .leaderboard-table {
           width: 100%;
           border-collapse: collapse;
-        }
-        .leaderboard-table thead tr {
-          background: rgba(255,255,255,0.04);
-          border-bottom: 1px solid rgba(255,255,255,0.07);
+          min-width: 700px;
         }
         .leaderboard-table th {
-          padding: 14px 18px;
+          padding: 20px 24px;
           text-align: left;
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.08em;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: #6b7280;
+          color: #737373;
+          border-bottom: 2px solid #262626;
+          background: rgba(0,0,0,0.8);
         }
         .table-row {
-          border-bottom: 1px solid rgba(255,255,255,0.04);
-          transition: background 0.15s;
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+          border-bottom: 1px solid #1a1a1a;
         }
-        .table-row:last-child { border-bottom: none; }
-        .table-row:hover { background: rgba(255,255,255,0.03); }
-        .table-row.top-three { background: rgba(245,158,11,0.03); }
-        .table-row.top-three:hover { background: rgba(245,158,11,0.06); }
+        .table-row:hover { 
+          background: rgba(157, 78, 221, 0.05); 
+        }
+        .table-row:hover td {
+          color: #FFFFFF;
+        }
         .leaderboard-table td {
-          padding: 14px 18px;
+          padding: 18px 24px;
           font-size: 14px;
-          color: #d1d5db;
+          color: #A3A3A3;
+          font-weight: 500;
         }
         .rank-cell {
-          font-size: 16px;
-          font-weight: 700;
-          width: 60px;
-          color: #f3f4f6 !important;
+          font-size: 16px !important;
+          font-weight: 800 !important;
+          width: 80px;
+          color: #FFD700 !important;
+          letter-spacing: -0.05em;
         }
+        
+        /* Apply special glow for rank 1-3 */
+        .table-row.top-three .rank-cell {
+          text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+        }
+        
         .wallet-link {
-          color: #93c5fd;
+          color: #FFFFFF;
           text-decoration: none;
-          font-weight: 500;
-          font-family: 'Courier New', monospace;
-          font-size: 13px;
+          font-family: inherit;
+          font-weight: 600;
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          transition: color 0.15s;
+          gap: 8px;
+          transition: color 0.2s;
         }
-        .wallet-link:hover { color: #60a5fa; }
-        .ext-icon { font-size: 10px; opacity: 0.6; }
+        .wallet-link:hover { color: #9D4EDD; }
+        .ext-icon { font-size: 10px; color: #737373; }
+        
         .wins-badge {
           display: inline-block;
-          background: rgba(34,197,94,0.15);
-          color: #4ade80;
-          font-weight: 700;
-          padding: 2px 10px;
-          border-radius: 20px;
-          font-size: 13px;
-          border: 1px solid rgba(34,197,94,0.2);
+          color: #FFFFFF;
+          font-weight: 800;
+          font-size: 16px;
         }
-        .winrate-badge { font-weight: 700; font-size: 14px; }
-        .time-cell { font-size: 12px; color: #6b7280 !important; }
+        .winrate-badge { 
+          font-weight: 800; 
+          font-size: 15px; 
+          letter-spacing: -0.02em;
+        }
+        .time-cell { 
+          font-size: 12px !important; 
+          color: #737373 !important; 
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
 
-        /* ── Skeleton ── */
+        /* ── Skeleton / Loading ── */
         .table-skeleton {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          padding: 16px;
+          padding: 24px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 16px;
         }
         .skeleton-row {
-          height: 48px;
-          background: rgba(255,255,255,0.05);
-          border-radius: 8px;
-          animation: shimmer 1.4s ease-in-out infinite;
+          height: 40px;
+          background: #121212;
+          position: relative;
+          overflow: hidden;
+          border: 1px solid #262626;
         }
-        @keyframes shimmer {
-          0%,100% { opacity: 0.5; }
-          50% { opacity: 1; }
+        .skeleton-row::after {
+          content: "";
+          position: absolute;
+          top: 0; right: 0; bottom: 0; left: 0;
+          background: linear-gradient(90deg, transparent, rgba(157, 78, 221, 0.1), transparent);
+          transform: translateX(-100%);
+          animation: scanline 2s infinite linear;
+        }
+        @keyframes scanline {
+          100% { transform: translateX(100%); }
         }
 
         /* ── Empty state ── */
         .empty-state {
           text-align: center;
-          padding: 60px 20px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
+          padding: 80px 20px;
         }
-        .empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
-        .empty-state p { color: #6b7280; font-size: 14px; }
-
-        /* ── Responsive ── */
-        @media (max-width: 640px) {
-          .leaderboard-table th:nth-child(6),
-          .leaderboard-table td:nth-child(6) { display: none; }
-          .leaderboard-table th:nth-child(4),
-          .leaderboard-table td:nth-child(4) { display: none; }
+        .empty-icon { 
+          font-size: 24px; 
+          color: #FFD700; 
+          font-weight: 800;
+          display: block; 
+          margin-bottom: 16px; 
+          text-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+        .empty-state p { 
+          color: #737373; 
+          font-size: 12px; 
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
         }
       `}</style>
 
       <div className="page-wrapper">
         {/* Header */}
         <div className="header">
-          <div className="header-eyebrow">
+          <div className="sys-status">
             <span className="live-dot" />
-            BTC 15-Min Markets
+            DATALINK: ACTIVE // BTC 15-MIN
           </div>
-          <h1>🏆 Polymarket Leaderboard</h1>
+          <h1>Polymarket Leaderboard</h1>
           <p className="header-sub">
-            Track the top traders across BTC 15-minute prediction markets — updated every 15 minutes.
+            Track top tier operators across BTC prediction markets. Automatic synchronization every 15 cycles.
           </p>
         </div>
 
         {/* Stats bar */}
         <div className="stats-bar">
-          <div className="stat-chip">
-            <span className="label">24h Traders</span>
+          <BracketBox className="hud-stat">
+            <span className="label">Active Operators (24H)</span>
             <span className="value">{data24h.length}</span>
-          </div>
-          <div className="stat-chip">
-            <span className="label">All-time Traders</span>
+          </BracketBox>
+          <BracketBox className="hud-stat">
+            <span className="label">Global Directory</span>
             <span className="value">{dataOverall.length}</span>
-          </div>
-          <div className="stat-chip">
-            <span className="label">Top Win Rate (24h)</span>
+          </BracketBox>
+          <BracketBox className="hud-stat">
+            <span className="label">Peak Win Rate</span>
             <span className="value">
               {data24h.length > 0 ? `${(data24h[0]?.win_rate || 0).toFixed(1)}%` : "—"}
             </span>
-          </div>
-          <div className="stat-chip">
-            <span className="label">Last Refresh</span>
-            <span className="value">
-              {lastRefresh ? lastRefresh.toLocaleTimeString() : "Loading..."}
+          </BracketBox>
+        </div>
+
+        {/* Controls */}
+        <div className="controls-row">
+          {lastRefresh && (
+            <span className="refresh-info">
+              SYNCED {lastRefresh.toLocaleTimeString()}
             </span>
-          </div>
+          )}
+          <button className="refresh-btn" onClick={fetchAll}>
+            [ FORCE SYNC ]
+          </button>
         </div>
 
         {/* Tabs */}
@@ -467,61 +560,19 @@ export default function Home() {
             className={`tab-btn ${activeTab === "24h" ? "active" : ""}`}
             onClick={() => setActiveTab("24h")}
           >
-            🔥 Last 24h
+            [ LAST 24H ]
           </button>
           <button
             className={`tab-btn ${activeTab === "overall" ? "active" : ""}`}
             onClick={() => setActiveTab("overall")}
           >
-            🏆 All-Time
+            [ ALL-TIME ]
           </button>
         </div>
 
-        {/* 24h Leaderboard */}
-        {activeTab === "24h" && (
-          <>
-            <div className="section-header">
-              <div className="section-title">
-                🔥 Top 50 — Last 24 Hours
-                <span className="section-badge">LIVE</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {lastRefresh && (
-                  <span className="refresh-info">
-                    Updated {lastRefresh.toLocaleTimeString()}
-                  </span>
-                )}
-                <button className="refresh-btn" onClick={fetchAll}>
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
-            <LeaderboardTable data={data24h} loading={loading24h} />
-          </>
-        )}
-
-        {/* Overall Leaderboard */}
-        {activeTab === "overall" && (
-          <>
-            <div className="section-header">
-              <div className="section-title">
-                🏆 Overall Top 100 — All-Time
-                <span className="section-badge">ALL TIME</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {lastRefresh && (
-                  <span className="refresh-info">
-                    Updated {lastRefresh.toLocaleTimeString()}
-                  </span>
-                )}
-                <button className="refresh-btn" onClick={fetchAll}>
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
-            <LeaderboardTable data={dataOverall} loading={loadingOverall} />
-          </>
-        )}
+        {/* Data View */}
+        {activeTab === "24h" && <LeaderboardTable data={data24h} loading={loading24h} />}
+        {activeTab === "overall" && <LeaderboardTable data={dataOverall} loading={loadingOverall} />}
       </div>
     </>
   );
