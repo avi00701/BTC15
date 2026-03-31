@@ -528,6 +528,73 @@ export default function Home() {
           text-transform: uppercase;
           letter-spacing: 0.1em;
         }
+
+        /* ── Responsive Mobile Formatting ── */
+        @media (max-width: 768px) {
+          .page-wrapper {
+            padding: 24px 16px 80px;
+          }
+          
+          .header h1 {
+            font-size: 32px;
+          }
+          
+          .header-sub {
+            font-size: 12px;
+          }
+          
+          .stats-bar {
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+          }
+          
+          .controls-row {
+            flex-direction: column-reverse;
+            align-items: flex-start;
+          }
+
+          .tab-btn {
+            padding: 12px 16px;
+            font-size: 11px;
+            flex: 1;
+            text-align: center;
+          }
+
+          /* Compress table for mobile viewing */
+          .table-wrapper {
+            background: transparent;
+            border: none;
+            padding: 0;
+          }
+          
+          .leaderboard-table {
+            min-width: 100%;
+          }
+          
+          .leaderboard-table th,
+          .leaderboard-table td {
+            padding: 12px 8px;
+            font-size: 12px;
+          }
+          
+          /* Hide Executions (4) and Last Win (6) to fit screens */
+          .leaderboard-table th:nth-child(4),
+          .leaderboard-table td:nth-child(4),
+          .leaderboard-table th:nth-child(6),
+          .leaderboard-table td:nth-child(6) { 
+            display: none; 
+          }
+          
+          .rank-cell {
+            width: 40px;
+            font-size: 14px !important;
+          }
+          
+          .winrate-badge {
+             font-size: 13px;
+          }
+        }
       `}</style>
 
       <div className="page-wrapper">
