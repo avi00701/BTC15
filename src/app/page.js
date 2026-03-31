@@ -76,49 +76,51 @@ function LeaderboardTable({ data, loading }) {
 
   return (
     <BracketBox className="table-wrapper">
-      <table className="leaderboard-table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Operator</th>
-            <th>Wins</th>
-            <th>Executions</th>
-            <th>Win %</th>
-            <th>Last Win</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((user, i) => (
-            <tr key={user.wallet} className={`table-row ${i < 3 ? "top-three" : ""}`}>
-              <td className="rank-cell">{getRankBadge(i)}</td>
-              <td className="wallet-cell">
-                <a
-                  href={`https://polymarket.com/profile/${user.wallet}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="wallet-link"
-                >
-                  {shortWallet(user.wallet)}
-                  <span className="ext-icon">↗</span>
-                </a>
-              </td>
-              <td className="wins-cell">
-                <span className="wins-badge">{user.wins}</span>
-              </td>
-              <td className="trades-cell">{user.total_trades}</td>
-              <td className="winrate-cell">
-                <span
-                  className="winrate-badge"
-                  style={{ color: getWinRateColor(user.win_rate) }}
-                >
-                  {(user.win_rate || 0).toFixed(1)}%
-                </span>
-              </td>
-              <td className="time-cell">{formatTime(user.last_updated)}</td>
+      <div className="table-scroll-area">
+        <table className="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Operator</th>
+              <th>Wins</th>
+              <th>Executions</th>
+              <th>Win %</th>
+              <th>Last Win</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((user, i) => (
+              <tr key={user.wallet} className={`table-row ${i < 3 ? "top-three" : ""}`}>
+                <td className="rank-cell">{getRankBadge(i)}</td>
+                <td className="wallet-cell">
+                  <a
+                    href={`https://polymarket.com/profile/${user.wallet}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="wallet-link"
+                  >
+                    {shortWallet(user.wallet)}
+                    <span className="ext-icon">↗</span>
+                  </a>
+                </td>
+                <td className="wins-cell">
+                  <span className="wins-badge">{user.wins}</span>
+                </td>
+                <td className="trades-cell">{user.total_trades}</td>
+                <td className="winrate-cell">
+                  <span
+                    className="winrate-badge"
+                    style={{ color: getWinRateColor(user.win_rate) }}
+                  >
+                    {(user.win_rate || 0).toFixed(1)}%
+                  </span>
+                </td>
+                <td className="time-cell">{formatTime(user.last_updated)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </BracketBox>
   );
 }
@@ -405,7 +407,12 @@ export default function Home() {
         /* ── Table ── */
         .table-wrapper {
           padding: 0 !important;
+        }
+        .table-scroll-area {
+          width: 100%;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          display: block;
         }
         .leaderboard-table {
           width: 100%;
@@ -554,20 +561,21 @@ export default function Home() {
             align-items: flex-start;
           }
 
+          .tabs {
+            overflow-x: auto;
+            white-space: nowrap;
+          }
+          
           .tab-btn {
             padding: 12px 16px;
             font-size: 11px;
-            flex: 1;
-            text-align: center;
           }
 
           /* Allow horizontal scroll for full table on mobile */
           .table-wrapper {
             background: rgba(0,0,0,0.6);
             border: 1px solid rgba(38,38,38,0.3);
-            padding: 0;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            padding: 0 !important;
           }
           
           .leaderboard-table {
