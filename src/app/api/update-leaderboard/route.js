@@ -68,8 +68,10 @@ async function processLeaderboard() {
       const tradeTimeIso = new Date(t.timestamp * 1000).toISOString();
       const isNew = lastTime === "0" ? true : new Date(tradeTimeIso) > new Date(lastTime);
       
-      const isBtc = (t.title || "").toLowerCase().includes("btc");
-      const is15m = (t.title || "").includes("15");
+      const title = (t.title || "").toLowerCase();
+      const slug = (t.eventSlug || "").toLowerCase();
+      const isBtc = title.includes("btc") || slug.includes("btc");
+      const is15m = title.includes("15") || slug.includes("15");
       return isNew && isBtc && is15m;
     });
 
