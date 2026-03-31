@@ -10,12 +10,19 @@ function shortWallet(addr) {
 
 function formatTime(date) {
   if (!date) return "—";
-  return new Date(date).toLocaleString("en-IN", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  
+  const now = new Date();
+  const past = new Date(date);
+  const diffMs = now - past;
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
 }
 
 function getRankBadge(i) {
@@ -62,7 +69,7 @@ function LeaderboardTable({ data, loading }) {
             <th>Wins</th>
             <th>Trades</th>
             <th>Win %</th>
-            <th>Last Active</th>
+            <th>Last Win</th>
           </tr>
         </thead>
         <tbody>
