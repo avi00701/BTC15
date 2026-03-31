@@ -190,16 +190,31 @@ export default function Home() {
         body {
           font-family: 'Space Grotesk', monospace, sans-serif;
           background-color: #000000;
-          /* The Technical Grid */
-          background-image: 
-            linear-gradient(#121212 1px, transparent 1px),
-            linear-gradient(90deg, #121212 1px, transparent 1px);
-          background-size: 32px 32px;
-          background-attachment: fixed;
           color: #FFFFFF;
           min-height: 100vh;
           overflow-x: hidden;
           -webkit-font-smoothing: antialiased;
+          margin: 0;
+          padding: 0;
+        }
+
+        /* ── CRT & HUD OVERLAYS ── */
+        .crt-overlay {
+          position: fixed;
+          top: 0; left: 0; width: 100vw; height: 100vh;
+          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                      linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+          background-size: 100% 3px, 3px 100%;
+          pointer-events: none;
+          z-index: 9999;
+          opacity: 0.2;
+        }
+        .vignette {
+          position: fixed;
+          top: 0; left: 0; width: 100%; height: 100%;
+          box-shadow: inset 0 0 12vw rgba(0,0,0,0.9);
+          pointer-events: none;
+          z-index: 9998;
         }
 
         /* ── Layout ── */
@@ -207,6 +222,18 @@ export default function Home() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 48px 24px 80px;
+          position: relative;
+          background-image: 
+            radial-gradient(circle at 50% 50%, rgba(45, 69, 216, 0.05) 0%, transparent 70%),
+            linear-gradient(rgba(45, 69, 216, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(45, 69, 216, 0.03) 1px, transparent 1px);
+          background-size: 100% 100%, 48px 48px, 48px 48px;
+          animation: grid-drift 100s linear infinite;
+        }
+
+        @keyframes grid-drift {
+          from { background-position: center, 0 0, 0 0; }
+          to { background-position: center, 0 1000px, 1000px 0; }
         }
 
         /* ── Header ── */
@@ -306,13 +333,26 @@ export default function Home() {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          position: relative;
+          padding: 8px 0;
+          transition: all 0.3s ease;
+        }
+        .hud-stat:hover {
+          transform: translateX(4px);
+        }
+        .hud-stat::before {
+          content: "[ LIVE.SYNC ]";
+          position: absolute;
+          top: -12px; left: 0; font-size: 8px; color: #10B981;
+          opacity: 0.3; letter-spacing: 1px;
+          font-weight: 800;
         }
         .hud-stat .label {
           font-size: 11px;
           color: #737373;
           text-transform: uppercase;
-          letter-spacing: 0.1em;
-          font-weight: 600;
+          letter-spacing: 0.15em;
+          font-weight: 700;
         }
         .hud-stat .value {
           font-size: 36px;
@@ -686,12 +726,17 @@ export default function Home() {
         }
       `}</style>
 
+    <div className="main-hud">
+      <div className="crt-overlay" />
+      <div className="vignette" />
+      
       <div className="page-wrapper">
         {/* Header */}
         <div className="header">
           <div className="sys-status">
             <span className="live-dot" />
             DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()}
+            <span style={{ marginLeft: '12px', opacity: 0.3, letterSpacing: '1px' }}>[ SEC: BTC-TRADES // VER: 4.2.0-A ]</span>
           </div>
           <h1>Polymarket Leaderboard</h1>
           <p className="header-sub">
@@ -775,6 +820,7 @@ export default function Home() {
           {activeTab === "overall" && <LeaderboardTable data={dataOverall} loading={loadingOverall} />}
         </div>
       </div>
+    </div>
     </>
   );
 }
