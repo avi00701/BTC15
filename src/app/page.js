@@ -161,6 +161,24 @@ export default function Home() {
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* ── Scrollbars ── */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #080808;
+          border-left: 1px solid #1a1a1a;
+          border-top: 1px solid #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #333333;
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #9D4EDD;
+        }
+
         body {
           font-family: 'Space Grotesk', monospace, sans-serif;
           background-color: #000000;
@@ -172,6 +190,7 @@ export default function Home() {
           background-attachment: fixed;
           color: #FFFFFF;
           min-height: 100vh;
+          overflow-x: hidden;
           -webkit-font-smoothing: antialiased;
         }
 
