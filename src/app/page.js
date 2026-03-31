@@ -332,31 +332,36 @@ export default function Home() {
         .hud-stat {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 16px;
           position: relative;
-          padding: 16px 0;
-          transition: all 0.3s ease;
+          padding: 24px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 100%;
         }
         .hud-stat:hover {
+          background: rgba(45, 69, 216, 0.05);
           transform: translateY(-2px);
         }
         .hud-stat .label {
-          font-size: 11px;
+          font-size: 10px;
           color: #737373;
           text-transform: uppercase;
-          letter-spacing: 0.15em;
+          letter-spacing: 0.2em;
           font-weight: 700;
+          opacity: 0.8;
         }
         .hud-stat .value {
-          font-size: 36px;
+          font-size: 42px;
           color: #2D45D8;
           font-weight: 800;
-          letter-spacing: -0.03em;
+          letter-spacing: -0.05em;
           position: relative;
           display: inline-block;
           width: fit-content;
-          padding-bottom: 6px;
-          text-shadow: 0 0 20px rgba(45, 69, 216, 0.2);
+          padding-top: 4px;
+          padding-bottom: 8px;
+          text-shadow: 0 0 30px rgba(45, 69, 216, 0.3);
+          line-height: 1;
         }
         .hud-stat .value::after {
           content: "";
@@ -364,8 +369,8 @@ export default function Home() {
           bottom: 0;
           left: 0;
           width: 100%;
-          height: 3px;
-          background: linear-gradient(90deg, #2D45D8, transparent);
+          height: 2px;
+          background: linear-gradient(90deg, #2D45D8, transparent 80%);
         }
 
         /* ── Tabs ── */
