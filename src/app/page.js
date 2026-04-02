@@ -246,14 +246,39 @@ export default function Home() {
         }
         @keyframes pulse-green { 0% { opacity: 1; transform: scale(1); filter: brightness(1.2); } 100% { opacity: 0.7; transform: scale(1.4); filter: brightness(1.5); } }
 
-        .header h1 { 
-          font-size: clamp(32px, 5vw, 56px); 
-          font-weight: 800; 
-          text-transform: uppercase; 
-          letter-spacing: -0.04em; 
-          margin-bottom: 12px; 
-        }
+        .header h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 0; position: relative; z-index: 2; }
         .header-sub { font-size: 14px; color: #737373; max-width: 600px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.6; }
+
+        .title-container {
+          position: relative;
+          display: inline-block;
+          padding: 16px 40px;
+          border-radius: 4px;
+          background: rgba(0, 0, 0, 0.4);
+          border: 1px solid rgba(45, 69, 216, 0.1);
+          overflow: hidden;
+          margin-top: 12px;
+        }
+        .border-beam {
+          position: absolute;
+          inset: -100%;
+          background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 300deg, #2D45D8 340deg, #60A5FA 360deg);
+          animation: rotate-beam 4s linear infinite;
+          pointer-events: none;
+        }
+        .title-container::after {
+          content: "";
+          position: absolute;
+          inset: 1px;
+          background: #000;
+          border-radius: inherit;
+          z-index: 1;
+        }
+        @keyframes rotate-beam {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
 
         .bracket-box {
           position: relative; padding: 28px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
@@ -350,7 +375,10 @@ export default function Home() {
               <span className="live-dot" />
               DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
             </div>
-            <h1>Polymarket BTC Leaderboard</h1>
+            <div className="title-container">
+              <div className="border-beam" />
+              <h1>Polymarket BTC Leaderboard</h1>
+            </div>
           </div>
 
           <div className="market-tabs">
