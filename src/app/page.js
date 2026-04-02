@@ -345,7 +345,7 @@ export default function Home() {
               DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
             </div>
             <h1>Polymarket Leaderboard</h1>
-            <p className="header-sub">Tracking High-Volume BTC Prediction Operators via Logarithmic Weighted Accuracy.</p>
+
           </div>
 
           <div className="market-tabs">
