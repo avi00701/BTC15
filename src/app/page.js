@@ -228,9 +228,8 @@ export default function Home() {
         .header {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: flex-start;
           margin-bottom: 32px;
-          text-align: center;
         }
 
         .title-container {
@@ -242,7 +241,6 @@ export default function Home() {
           border: 1px solid rgba(45, 69, 216, 0.2);
           overflow: hidden;
           margin-top: 12px;
-          text-align: left; /* Keep text left-aligned inside centered container */
         }
         .laser-trace {
           position: absolute;
@@ -314,7 +312,7 @@ export default function Home() {
           letter-spacing: -0.02em;
         }
 
-        .market-tabs { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; justify-content: center; }
+        .market-tabs { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
         .market-btn {
           padding: 18px 32px; border: 2px solid #1e1e1e; background: rgba(15, 10, 30, 0.4);
           color: #64748B; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit;
@@ -329,7 +327,7 @@ export default function Home() {
         }
         .market-btn:hover:not(.active) { color: #CBD5E1; border-color: #475569; background: rgba(45, 69, 216, 0.05); }
 
-        .controls-row { display: flex; justify-content: center; align-items: center; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
+        .controls-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
         .tabs { display: flex; gap: 8px; }
         .tab-btn {
           padding: 12px 24px; border: 2px solid #1e1e1e; background: #050505; color: #64748B;
