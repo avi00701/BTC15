@@ -225,62 +225,78 @@ export default function Home() {
           to { background-position: center, 0 1000px, 1000px 0; }
         }
 
-        .header { margin-bottom: 48px; text-align: left; }
         .sys-status {
           display: inline-flex;
           align-items: center;
           gap: 12px;
-          font-size: 12px;
-          font-weight: 700;
+          font-size: 13px;
+          font-weight: 800;
           text-transform: uppercase;
           color: #10B981;
-          margin-bottom: 16px;
-          padding: 8px 16px;
-          background: rgba(16, 185, 129, 0.05);
-          border: 1px solid rgba(16, 185, 129, 0.2);
+          margin-bottom: 20px;
+          padding: 10px 20px;
+          background: rgba(16, 185, 129, 0.08);
+          border: 2px solid rgba(16, 185, 129, 0.4);
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
         }
         .live-dot {
-          width: 8px; height: 8px; background: #10B981; border-radius: 50%;
-          box-shadow: 0 0 8px #10B981; animation: pulse-green 1.5s infinite;
+          width: 10px; height: 10px; background: #10B981; border-radius: 50%;
+          box-shadow: 0 0 12px #10B981, 0 0 20px rgba(16, 185, 129, 0.6); 
+          animation: pulse-green 1s infinite alternate;
         }
-        @keyframes pulse-green { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
+        @keyframes pulse-green { 0% { opacity: 1; transform: scale(1); filter: brightness(1.2); } 100% { opacity: 0.7; transform: scale(1.4); filter: brightness(1.5); } }
 
         .header h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 12px; }
         .header-sub { font-size: 14px; color: #737373; max-width: 600px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.6; }
 
         .bracket-box {
-          position: relative; padding: 24px; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
-          border: 1px solid rgba(38, 38, 38, 0.3); transition: all 0.3s;
+          position: relative; padding: 28px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
+          border: 1px solid rgba(45, 69, 216, 0.1); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .bracket-box:hover { border-color: rgba(45, 69, 216, 0.3); background: rgba(45, 69, 216, 0.02); }
-        .bracket-box .corner { position: absolute; width: 12px; height: 12px; border: 0 solid #262626; transition: border-color 0.3s; }
-        .bracket-box:hover .corner { border-color: #2D45D8; }
-        .bracket-box .tl { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
-        .bracket-box .tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
-        .bracket-box .bl { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; }
-        .bracket-box .br { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+        .bracket-box:hover { border-color: rgba(45, 69, 216, 0.5); background: rgba(45, 69, 216, 0.04); box-shadow: inset 0 0 20px rgba(45, 69, 216, 0.1); }
+        .bracket-box .corner { position: absolute; width: 16px; height: 16px; border: 0 solid #2D45D8; transition: all 0.3s; opacity: 0.4; }
+        .bracket-box:hover .corner { opacity: 1; filter: drop-shadow(0 0 5px #2D45D8); }
+        .bracket-box .tl { top: -2px; left: -2px; border-top-width: 3px; border-left-width: 3px; }
+        .bracket-box .tr { top: -2px; right: -2px; border-top-width: 3px; border-right-width: 3px; }
+        .bracket-box .bl { bottom: -2px; left: -2px; border-bottom-width: 3px; border-left-width: 3px; }
+        .bracket-box .br { bottom: -2px; right: -2px; border-bottom-width: 3px; border-right-width: 3px; }
 
         .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 48px; }
         .hud-stat { display: flex; flex-direction: column; gap: 12px; }
-        .hud-stat .label { font-size: 10px; color: #737373; text-transform: uppercase; font-weight: 700; letter-spacing: 0.15em; }
-        .hud-stat .value { font-size: 32px; color: #2D45D8; font-weight: 800; text-shadow: 0 0 20px rgba(45, 69, 216, 0.2); }
+        .hud-stat .label { font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 800; letter-spacing: 0.2em; margin-bottom: 4px; }
+        .hud-stat .value { 
+          font-size: 38px; color: #2D45D8; font-weight: 900; 
+          text-shadow: 0 0 10px rgba(45, 69, 216, 0.5), 0 0 25px rgba(45, 69, 216, 0.3); 
+          letter-spacing: -0.02em;
+        }
 
         .market-tabs { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
         .market-btn {
-          padding: 14px 24px; border: 1px solid #1a1a1a; background: rgba(255, 255, 255, 0.02);
-          color: #525252; font-weight: 700; text-transform: uppercase; cursor: pointer; font-family: inherit;
-          transition: all 0.3s; position: relative; min-width: 160px;
+          padding: 18px 32px; border: 2px solid #1e1e1e; background: rgba(15, 10, 30, 0.4);
+          color: #64748B; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); position: relative; min-width: 200px;
+          letter-spacing: 0.05em;
         }
-        .market-btn.active { color: #FFFFFF; border-color: #2D45D8; background: rgba(45, 69, 216, 0.1); }
-        .market-btn:hover:not(.active) { color: #A3A3A3; border-color: #333; }
+        .market-btn.active { 
+          color: #FFFFFF; border-color: #2D45D8; 
+          background: rgba(45, 69, 216, 0.15); 
+          box-shadow: 0 0 20px rgba(45, 69, 216, 0.25), inset 0 0 15px rgba(45, 69, 216, 0.1);
+          text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+        .market-btn:hover:not(.active) { color: #CBD5E1; border-color: #475569; background: rgba(45, 69, 216, 0.05); }
 
         .controls-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
         .tabs { display: flex; gap: 8px; }
         .tab-btn {
-          padding: 10px 20px; border: 1px solid #262626; background: #000; color: #737373;
-          font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all 0.2s;
+          padding: 12px 24px; border: 2px solid #1e1e1e; background: #050505; color: #64748B;
+          font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all 0.2s;
+          letter-spacing: 0.05em;
         }
-        .tab-btn.active { color: #FFFFFF; border-color: #2D45D8; background: rgba(45, 69, 216, 0.1); }
+        .tab-btn.active { 
+          color: #FFFFFF; border-color: #2D45D8; 
+          background: rgba(45, 69, 216, 0.2); 
+          box-shadow: 0 0 15px rgba(45, 69, 216, 0.2);
+        }
         
         .refresh-btn {
           background: transparent; border: 1px solid #262626; color: #2D45D8; font-family: inherit; font-size: 11px;
@@ -296,11 +312,15 @@ export default function Home() {
         .table-row { border-bottom: 1px solid #1a1a1a; transition: background 0.2s; }
         .table-row:hover { background: rgba(45, 69, 216, 0.05); }
         .leaderboard-table td { padding: 18px 24px; font-size: 14px; color: #A3A3A3; }
-        .rank-cell { font-weight: 800; color: #2D45D8 !important; width: 80px; }
-        .wallet-link { color: #FFF; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
-        .wallet-link:hover { color: #2D45D8; }
-        .wins-badge { font-weight: 800; color: #FFF; font-size: 16px; }
-        .winrate-badge { font-weight: 800; }
+        .rank-cell { font-weight: 900; color: #2D45D8 !important; width: 80px; text-shadow: 0 0 10px rgba(45, 69, 216, 0.4); font-size: 16px; }
+        .wallet-link { color: #F8FAFC; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .wallet-link:hover { color: #2D45D8; text-shadow: 0 0 8px rgba(45, 69, 216, 0.5); }
+        .wins-badge { 
+          font-weight: 900; color: #FFF; font-size: 18px; 
+          background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 4px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .winrate-badge { font-weight: 900; letter-spacing: 0.02em; }
 
         .footer-note { font-size: 10px; color: #404040; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 32px; }
 
