@@ -369,7 +369,19 @@ export default function Home() {
         }
         .winrate-badge { font-weight: 900; letter-spacing: 0.02em; }
 
-        .footer-note { font-size: 10px; color: #404040; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 32px; }
+        .footer-note { 
+          font-size: 11px; color: #525252; text-transform: uppercase; letter-spacing: 0.25em; margin-top: 48px; 
+          text-align: center; font-weight: 800; border-top: 1px solid #171717; padding-top: 24px;
+          text-shadow: 0 0 8px rgba(45, 69, 216, 0.4);
+        }
+
+        .fade-in-up {
+          animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
 
         @media (max-width: 768px) {
           .page-wrapper { padding: 24px 16px; }
@@ -385,7 +397,7 @@ export default function Home() {
         <div className="crt-overlay" />
         <div className="vignette" />
 
-        <div className="page-wrapper">
+        <div className="page-wrapper fade-in-up">
           <div className="header">
             <div className="sys-status">
               <span className="live-dot" />
@@ -443,7 +455,7 @@ export default function Home() {
           <LeaderboardTable data={displayData} loading={displayLoading} />
 
           <div className="footer-note">
-            * RANKING ENFORCED VIA WEIGHTED LOGARITHMIC SCORING. MINIMUM 5 TOTAL TRADES REQUIRED FOR REGISTRY.
+            CREATED BY DARK KNIGHT // VERSION 2.0 // EST. 2026
           </div>
         </div>
       </div>
