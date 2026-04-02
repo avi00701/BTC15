@@ -350,7 +350,7 @@ export default function Home() {
               <span className="live-dot" />
               DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
             </div>
-            <h1>Polymarket Leaderboard</h1>
+            <h1>Polymarket BTC Leaderboard</h1>
           </div>
 
           <div className="market-tabs">
