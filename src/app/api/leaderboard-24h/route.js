@@ -8,20 +8,23 @@ const supabase = createClient(
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "btc_15m";
-  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Query users_stats filtered by last_updated in the past 24 hours
-  const { data, error } = await supabase
-    .from("users_stats")
-    .select("wallet, wins, total_trades, win_rate, last_updated")
-    .eq("market_type", type)
-    .gte("last_updated", last24h)
-    .order("wins", { ascending: false })
-    .limit(50);
+  // Use the RPC for DB-level aggregation & performance
+  const { data, error } = await supabase.rpc("get_24h_leaderboard", { m_type: type });
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error(`[API 24h] Query error: ${error.message}`);
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 
-  return Response.json(data || []);
+  return new Response(JSON.stringify(data || []), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "s-maxage=60, stale-while-revalidate=120"
+    }
+  });
 }

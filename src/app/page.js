@@ -69,7 +69,7 @@ function LeaderboardTable({ data, loading }) {
     return (
       <BracketBox className="empty-state">
         <span className="empty-icon">SYS_WAIT</span>
-        <p>AWAITING DATA FROM DATALINK // CRON CYCLE PENDING</p>
+        <p>AWAITING DATA FROM DATALINK // NO ELIGIBLE OPERATORS FOUND</p>
       </BracketBox>
     );
   }
@@ -158,9 +158,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(fetchAll, 5 * 60 * 1000); // 5 minutes
+    const interval = setInterval(fetchAll, 60 * 1000 * 5); // 5 mins
     return () => clearInterval(interval);
   }, [fetchAll]);
+
+  const displayData = activeTab === "24h" ? data24h : dataOverall;
+  const displayLoading = activeTab === "24h" ? loading24h : loadingOverall;
 
   return (
     <>
@@ -170,22 +173,10 @@ export default function Home() {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         /* ── Scrollbars ── */
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-          background: #080808;
-          border-left: 1px solid #1a1a1a;
-          border-top: 1px solid #1a1a1a;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: #333333;
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: #2D45D8;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #080808; border-left: 1px solid #1a1a1a; border-top: 1px solid #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2D45D8; }
 
         body {
           font-family: 'Space Grotesk', monospace, sans-serif;
@@ -193,7 +184,6 @@ export default function Home() {
           color: #FFFFFF;
           min-height: 100vh;
           overflow-x: hidden;
-          -webkit-font-smoothing: antialiased;
           margin: 0;
           padding: 0;
         }
@@ -217,7 +207,6 @@ export default function Home() {
           z-index: 9998;
         }
 
-        /* ── Layout ── */
         .page-wrapper {
           max-width: 1200px;
           margin: 0 auto;
@@ -236,588 +225,158 @@ export default function Home() {
           to { background-position: center, 0 1000px, 1000px 0; }
         }
 
-        /* ── Header ── */
-        .header {
-          margin-bottom: 48px;
-          text-align: left;
-          position: relative;
-        }
-        
+        .header { margin-bottom: 48px; text-align: left; }
         .sys-status {
           display: inline-flex;
           align-items: center;
           gap: 12px;
           font-size: 12px;
           font-weight: 700;
-          letter-spacing: 0.1em;
           text-transform: uppercase;
           color: #10B981;
           margin-bottom: 16px;
           padding: 8px 16px;
           background: rgba(16, 185, 129, 0.05);
           border: 1px solid rgba(16, 185, 129, 0.2);
-          box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
         }
-
         .live-dot {
-          width: 8px;
-          height: 8px;
-          background: #10B981;
-          border-radius: 50%;
-          box-shadow: 0 0 8px #10B981;
-          animation: pulse-green 1.5s ease-in-out infinite;
+          width: 8px; height: 8px; background: #10B981; border-radius: 50%;
+          box-shadow: 0 0 8px #10B981; animation: pulse-green 1.5s infinite;
         }
-        @keyframes pulse-green {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(1.3); }
-        }
+        @keyframes pulse-green { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
 
-        .header h1 {
-          font-size: clamp(36px, 6vw, 56px);
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: -0.04em;
-          color: #FFFFFF;
-          margin-bottom: 12px;
-          text-shadow: 0 0 30px rgba(255,255,255,0.1);
-        }
+        .header h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 12px; }
+        .header-sub { font-size: 14px; color: #737373; max-width: 600px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.6; }
 
-        .header-sub {
-          font-size: 14px;
-          color: #737373;
-          max-width: 600px;
-          line-height: 1.6;
-          letter-spacing: 0.02em;
-          text-transform: uppercase;
-        }
-
-        /* ── Bracket HUD Component ── */
         .bracket-box {
-          position: relative;
-          padding: 24px;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
-          transition: all 0.3s ease;
-          border: 1px solid rgba(38, 38, 38, 0.3);
+          position: relative; padding: 24px; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+          border: 1px solid rgba(38, 38, 38, 0.3); transition: all 0.3s;
         }
-        .bracket-box:hover {
-          background: rgba(45, 69, 216, 0.02);
-          border-color: rgba(45, 69, 216, 0.2);
-          box-shadow: inset 0 0 20px rgba(45, 69, 216, 0.05), 0 0 15px rgba(45, 69, 216, 0.1);
-        }
-        .bracket-box .corner {
-          position: absolute;
-          width: 16px;
-          height: 16px;
-          border: 0 solid #262626;
-          transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .bracket-box:hover .corner {
-          border-color: #2D45D8;
-          box-shadow: 0 0 10px rgba(45, 69, 216, 0.3);
-        }
+        .bracket-box:hover { border-color: rgba(45, 69, 216, 0.3); background: rgba(45, 69, 216, 0.02); }
+        .bracket-box .corner { position: absolute; width: 12px; height: 12px; border: 0 solid #262626; transition: border-color 0.3s; }
+        .bracket-box:hover .corner { border-color: #2D45D8; }
         .bracket-box .tl { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
         .bracket-box .tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
         .bracket-box .bl { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; }
         .bracket-box .br { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
 
-        /* ── Stats Bar ── */
-        .stats-bar {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 24px;
-          margin-bottom: 48px;
-        }
-        
-        .hud-stat {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          position: relative;
-          padding: 24px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          width: 100%;
-        }
-        .hud-stat:hover {
-          background: rgba(45, 69, 216, 0.05);
-          transform: translateY(-2px);
-        }
-        .hud-stat .label {
-          font-size: 10px;
-          color: #737373;
-          text-transform: uppercase;
-          letter-spacing: 0.2em;
-          font-weight: 700;
-          opacity: 0.8;
-        }
-        .hud-stat .value {
-          font-size: 42px;
-          color: #2D45D8;
-          font-weight: 800;
-          letter-spacing: -0.05em;
-          position: relative;
-          display: inline-block;
-          width: fit-content;
-          padding-top: 4px;
-          padding-bottom: 8px;
-          text-shadow: 0 0 30px rgba(45, 69, 216, 0.3);
-          line-height: 1;
-        }
-        .hud-stat .value::after {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          height: 2px;
-          background: linear-gradient(90deg, #2D45D8, transparent 80%);
-        }
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 48px; }
+        .hud-stat { display: flex; flex-direction: column; gap: 12px; }
+        .hud-stat .label { font-size: 10px; color: #737373; text-transform: uppercase; font-weight: 700; letter-spacing: 0.15em; }
+        .hud-stat .value { font-size: 32px; color: #2D45D8; font-weight: 800; text-shadow: 0 0 20px rgba(45, 69, 216, 0.2); }
 
-        /* ── Tabs ── */
-        .tabs {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 32px;
-        }
-        .tab-btn {
-          padding: 12px 24px;
-          border: 1px solid #262626;
-          background: rgba(0, 0, 0, 0.5);
-          color: #737373;
-          font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          cursor: pointer;
-          font-family: inherit;
-          transition: all 0.2s ease;
-          position: relative;
-          overflow: hidden;
-        }
-        .tab-btn::before {
-          content: "";
-          position: absolute;
-          top: 0; left: 0; width: 2px; height: 100%;
-          background: transparent;
-          transition: background 0.2s;
-        }
-        .tab-btn.active {
-          color: #FFFFFF;
-          border-color: rgba(45, 69, 216, 0.4);
-          background: rgba(45, 69, 216, 0.1);
-        }
-        .tab-btn.active::before {
-          background: #2D45D8;
-          box-shadow: 0 0 10px #2D45D8;
-        }
-        .tab-btn:hover:not(.active) {
-          border-color: #2D45D8;
-          color: #FFFFFF;
-        }
-
-        .market-tabs {
-          display: flex;
-          gap: 20px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-        }
+        .market-tabs { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
         .market-btn {
-          padding: 16px 28px;
-          border: 1px solid #1a1a1a;
-          background: rgba(45, 69, 216, 0.03);
-          color: #525252;
-          font-weight: 800;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 13px;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          min-width: 200px;
-          text-align: left;
-          overflow: visible;
+          padding: 14px 24px; border: 1px solid #1a1a1a; background: rgba(255, 255, 255, 0.02);
+          color: #525252; font-weight: 700; text-transform: uppercase; cursor: pointer; font-family: inherit;
+          transition: all 0.3s; position: relative; min-width: 160px;
         }
-        
-        /* HUD Index on Button Removed per user request */
-        
-        .market-btn .btn-corners {
-          position: absolute;
-          top: -1px; left: -1px; right: -1px; bottom: -1px;
-          pointer-events: none;
-        }
-        .market-btn .btn-corners::before,
-        .market-btn .btn-corners::after {
-          content: "";
-          position: absolute;
-          width: 8px; height: 8px;
-          border: 0 solid transparent;
-          transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        
-        /* Top Left and Bottom Right Corners for HUD effect */
-        .market-btn .btn-corners::before {
-          top: 0; left: 0; border-top: 2px solid #262626; border-left: 2px solid #262626;
-        }
-        .market-btn .btn-corners::after {
-          bottom: 0; right: 0; border-bottom: 2px solid #262626; border-right: 2px solid #262626;
-        }
+        .market-btn.active { color: #FFFFFF; border-color: #2D45D8; background: rgba(45, 69, 216, 0.1); }
+        .market-btn:hover:not(.active) { color: #A3A3A3; border-color: #333; }
 
-        .market-btn.active {
-          color: #FFFFFF;
-          border-color: rgba(45, 69, 216, 0.5);
-          background: rgba(45, 69, 216, 0.1);
-          box-shadow: inset 0 0 20px rgba(45, 69, 216, 0.1);
+        .controls-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .tabs { display: flex; gap: 8px; }
+        .tab-btn {
+          padding: 10px 20px; border: 1px solid #262626; background: #000; color: #737373;
+          font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all 0.2s;
         }
+        .tab-btn.active { color: #FFFFFF; border-color: #2D45D8; background: rgba(45, 69, 216, 0.1); }
         
-        .market-btn.active .btn-corners::before,
-        .market-btn.active .btn-corners::after {
-          border-color: #2D45D8;
-          box-shadow: 0 0 10px rgba(45, 69, 216, 0.5);
-        }
-
-        .market-btn:hover:not(.active) {
-          border-color: #333;
-          color: #A3A3A3;
-          background: rgba(255, 255, 255, 0.02);
-        }
-        .market-btn:hover .btn-corners::before,
-        .market-btn:hover .btn-corners::after {
-          border-color: #444;
-        }
-
-        /* ── Controls Row ── */
-        .controls-row {
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 16px;
-        }
-        .refresh-info {
-          font-size: 11px;
-          color: #737373;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-        }
         .refresh-btn {
-          background: transparent;
-          border: 1px solid #262626;
-          color: #2D45D8;
-          font-family: inherit;
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          padding: 8px 16px;
-          cursor: pointer;
-          transition: all 0.2s;
+          background: transparent; border: 1px solid #262626; color: #2D45D8; font-family: inherit; font-size: 11px;
+          font-weight: 700; padding: 10px 20px; cursor: pointer; text-transform: uppercase;
         }
-        .refresh-btn:hover {
-          border-color: #2D45D8;
-          box-shadow: inset 0 0 10px rgba(45, 69, 216, 0.2);
-          text-shadow: 0 0 5px rgba(45, 69, 216, 0.5);
-        }
+        .refresh-btn:hover { border-color: #2D45D8; background: rgba(45, 69, 216, 0.05); }
 
-        /* ── Table ── */
-        .table-wrapper {
-          padding: 0 !important;
-        }
-        .table-scroll-area {
-          width: 100%;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          display: block;
-        }
-        .leaderboard-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 700px;
-        }
+        .leaderboard-table { width: 100%; border-collapse: collapse; }
         .leaderboard-table th {
-          padding: 20px 24px;
-          text-align: left;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          color: #737373;
-          border-bottom: 2px solid #262626;
-          background: rgba(0,0,0,0.8);
+          padding: 20px 24px; text-align: left; font-size: 10px; color: #737373; text-transform: uppercase;
+          border-bottom: 2px solid #262626; letter-spacing: 0.1em;
         }
-        .table-row {
-          transition: background 0.2s ease, box-shadow 0.2s ease;
-          border-bottom: 1px solid #1a1a1a;
-        }
-        .table-row:hover { 
-          background: rgba(45, 69, 216, 0.05); 
-        }
-        .table-row:hover td {
-          color: #FFFFFF;
-        }
-        .leaderboard-table td {
-          padding: 18px 24px;
-          font-size: 14px;
-          color: #A3A3A3;
-          font-weight: 500;
-        }
-        .rank-cell {
-          font-size: 16px !important;
-          font-weight: 800 !important;
-          width: 80px;
-          color: #2D45D8 !important;
-          letter-spacing: -0.05em;
-        }
-        
-        /* Apply special glow for rank 1-3 */
-        .table-row.top-three .rank-cell {
-          text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
-        }
-        
-        .wallet-link {
-          color: #FFFFFF;
-          text-decoration: none;
-          font-family: inherit;
-          font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          transition: color 0.2s;
-        }
+        .table-row { border-bottom: 1px solid #1a1a1a; transition: background 0.2s; }
+        .table-row:hover { background: rgba(45, 69, 216, 0.05); }
+        .leaderboard-table td { padding: 18px 24px; font-size: 14px; color: #A3A3A3; }
+        .rank-cell { font-weight: 800; color: #2D45D8 !important; width: 80px; }
+        .wallet-link { color: #FFF; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
         .wallet-link:hover { color: #2D45D8; }
-        .ext-icon { font-size: 10px; color: #737373; }
-        
-        .wins-badge {
-          display: inline-block;
-          color: #FFFFFF;
-          font-weight: 800;
-          font-size: 16px;
-        }
-        .winrate-badge { 
-          font-weight: 800; 
-          font-size: 15px; 
-          letter-spacing: -0.02em;
-        }
-        .time-cell { 
-          font-size: 12px !important; 
-          color: #737373 !important; 
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
+        .wins-badge { font-weight: 800; color: #FFF; font-size: 16px; }
+        .winrate-badge { font-weight: 800; }
 
-        /* ── Skeleton / Loading ── */
-        .table-skeleton {
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .skeleton-row {
-          height: 40px;
-          background: #121212;
-          position: relative;
-          overflow: hidden;
-          border: 1px solid #262626;
-        }
-        .skeleton-row::after {
-          content: "";
-          position: absolute;
-          top: 0; right: 0; bottom: 0; left: 0;
-          background: linear-gradient(90deg, transparent, rgba(45, 69, 216, 0.1), transparent);
-          transform: translateX(-100%);
-          animation: scanline 2s infinite linear;
-        }
-        @keyframes scanline {
-          100% { transform: translateX(100%); }
-        }
+        .footer-note { font-size: 10px; color: #404040; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 32px; }
 
-        /* ── Empty state ── */
-        .empty-state {
-          text-align: center;
-          padding: 80px 20px;
-        }
-        .empty-icon { 
-          font-size: 24px; 
-          color: #FFD700; 
-          font-weight: 800;
-          display: block; 
-          margin-bottom: 16px; 
-          text-shadow: 0 0 20px rgba(255,215,0,0.3);
-        }
-        .empty-state p { 
-          color: #737373; 
-          font-size: 12px; 
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-        }
-
-        /* ── Responsive Mobile Formatting ── */
         @media (max-width: 768px) {
-          .page-wrapper {
-            padding: 24px 16px 80px;
-          }
-          
-          .header h1 {
-            font-size: 32px;
-          }
-          
-          .header-sub {
-            font-size: 12px;
-          }
-          
-          .stats-bar {
-            grid-template-columns: 1fr;
-            gap: 16px;
-            margin-bottom: 32px;
-          }
-          
-          .controls-row {
-            flex-direction: column-reverse;
-            align-items: flex-start;
-          }
-
-          .tabs {
-            overflow-x: auto;
-            white-space: nowrap;
-          }
-          
-          .tab-btn {
-            padding: 12px 16px;
-            font-size: 11px;
-          }
-
-          /* Allow horizontal scroll for full table on mobile */
-          .table-wrapper {
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(38,38,38,0.3);
-            padding: 0 !important;
-          }
-          
-          .leaderboard-table {
-            min-width: 700px; /* Force minimum width to trigger scroll on small screens */
-          }
-          
-          .leaderboard-table th,
-          .leaderboard-table td {
-            padding: 12px 16px;
-            font-size: 12px;
-          }
-          
-          .rank-cell {
-            width: 40px;
-            font-size: 14px !important;
-          }
-          
-          .market-tabs {
-            flex-direction: column;
-            width: 100%;
-          }
-          
-          .market-btn {
-            width: 100%;
-            padding: 12px 16px;
-          }
-
-          .winrate-badge {
-             font-size: 13px;
-          }
+          .page-wrapper { padding: 24px 16px; }
+          .stats-bar { grid-template-columns: 1fr; }
+          .controls-row { flex-direction: column; align-items: stretch; }
+          .market-btn { width: 100%; }
+          .table-scroll-area { overflow-x: auto; }
+          .leaderboard-table { min-width: 600px; }
         }
       `}</style>
 
-    <div className="main-hud">
-      <div className="crt-overlay" />
-      <div className="vignette" />
-      
-      <div className="page-wrapper">
-        {/* Header */}
-        <div className="header">
-          <div className="sys-status">
-            <span className="live-dot" />
-            DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()}
+      <div className="main-hud">
+        <div className="crt-overlay" />
+        <div className="vignette" />
+
+        <div className="page-wrapper">
+          <div className="header">
+            <div className="sys-status">
+              <span className="live-dot" />
+              DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
+            </div>
+            <h1>Polymarket Leaderboard</h1>
+            <p className="header-sub">Tracking High-Volume BTC Prediction Operators via Logarithmic Weighted Accuracy.</p>
           </div>
-          <h1>Polymarket Leaderboard</h1>
-          <p className="header-sub">
-            Track top tier operators across BTC prediction markets. Automatic synchronization every refreshing cycle.
-          </p>
-        </div>
 
-        {/* Market Selection */}
-        <div className="market-tabs">
-          <button
-            className={`market-btn ${market === "btc_15m" ? "active" : ""}`}
-            onClick={() => {
-              console.log("Switching to 15m");
-              setMarket("btc_15m");
-            }}
-          >
-            <div className="btn-corners" />
-            BTC 15 MIN
-          </button>
-          <button
-            className={`market-btn ${market === "btc_5m" ? "active" : ""}`}
-            onClick={() => {
-              console.log("Switching to 5m");
-              setMarket("btc_5m");
-            }}
-          >
-            <div className="btn-corners" />
-            BTC 5 MIN
-          </button>
-        </div>
+          <div className="market-tabs">
+            <button className={`market-btn ${market === "btc_15m" ? "active" : ""}`} onClick={() => setMarket("btc_15m")}>
+              BTC 15 MIN
+            </button>
+            <button className={`market-btn ${market === "btc_5m" ? "active" : ""}`} onClick={() => setMarket("btc_5m")}>
+              BTC 5 MIN
+            </button>
+          </div>
 
-        {/* Stats bar */}
-        <div className="stats-bar">
-          <BracketBox className="hud-stat">
-            <span className="label">Active Operators (24H)</span>
-            <span className="value" style={{ color: '#2D45D8' }}>{data24h.length}</span>
-          </BracketBox>
-          <BracketBox className="hud-stat">
-            <span className="label">Global Directory</span>
-            <span className="value" style={{ color: '#2D45D8' }}>{dataOverall.length}</span>
-          </BracketBox>
-          <BracketBox className="hud-stat">
-            <span className="label">Peak Win Rate</span>
-            <span className="value" style={{ color: '#10B981' }}>
-              {data24h.length > 0 ? `${(data24h[0]?.win_rate || 0).toFixed(1)}%` : "—"}
-            </span>
-          </BracketBox>
-        </div>
+          <div className="stats-bar">
+            <BracketBox className="hud-stat">
+              <span className="label">Cohort Density ({activeTab})</span>
+              <span className="value">{displayData.length}</span>
+            </BracketBox>
+            <BracketBox className="hud-stat">
+              <span className="label">Sync Heartbeat</span>
+              <span className="value" style={{ fontSize: '18px', color: '#FFF' }}>
+                {lastRefresh ? lastRefresh.toLocaleTimeString() : "PENDING..."}
+              </span>
+            </BracketBox>
+            <BracketBox className="hud-stat">
+              <span className="label">Elite Win Rate</span>
+              <span className="value" style={{ color: '#10B981' }}>
+                {displayData.length > 0 ? `${(displayData[0]?.win_rate || 0).toFixed(1)}%` : "—"}
+              </span>
+            </BracketBox>
+          </div>
 
-        {/* Controls */}
-        <div className="controls-row">
-          {lastRefresh && (
-            <span className="refresh-info">
-              LAST SYNC: {lastRefresh.toLocaleTimeString()}
-            </span>
-          )}
-          <button className="refresh-btn" onClick={fetchAll} disabled={loading24h}>
-            {loading24h ? "[ SCANNING... ]" : "[ FORCE REFRESH ]"}
-          </button>
-        </div>
+          <div className="controls-row">
+            <div className="tabs">
+              <button className={`tab-btn ${activeTab === "24h" ? "active" : ""}`} onClick={() => setActiveTab("24h")}>
+                24H DYNAMIC
+              </button>
+              <button className={`tab-btn ${activeTab === "overall" ? "active" : ""}`} onClick={() => setActiveTab("overall")}>
+                ALL-TIME STATS
+              </button>
+            </div>
+            <button className="refresh-btn" onClick={fetchAll}>
+              {loading24h || loadingOverall ? "[ SCANNING... ]" : "[ FORCE REFRESH ]"}
+            </button>
+          </div>
 
-        {/* Tabs */}
-        <div className="tabs">
-          <button
-            className={`tab-btn ${activeTab === "24h" ? "active" : ""}`}
-            onClick={() => setActiveTab("24h")}
-          >
-            [ LAST 24H ]
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "overall" ? "active" : ""}`}
-            onClick={() => setActiveTab("overall")}
-          >
-            [ ALL-TIME ]
-          </button>
-        </div>
+          <LeaderboardTable data={displayData} loading={displayLoading} />
 
-        {/* Data View */}
-        <div className="data-results">
-          {activeTab === "24h" && <LeaderboardTable data={data24h} loading={loading24h} />}
-          {activeTab === "overall" && <LeaderboardTable data={dataOverall} loading={loadingOverall} />}
+          <div className="footer-note">
+            * RANKING ENFORCED VIA WEIGHTED LOGARITHMIC SCORING. MINIMUM 5 EXECUTIONS REQUIRED FOR REGISTRY.
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }

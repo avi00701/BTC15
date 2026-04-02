@@ -14,12 +14,10 @@ Build a backend system that:
 * Aggregates historical data
 * Serves leaderboard via API
 
----
-
-## 🏗️ High-Level Architecture
+# 🏗️ High-Level Architecture
 
 ```text
-Polymarket → Fetcher → Processor → Database → API → Frontend
+Polymarket → Incremental Sync → Trades Table (Unique) → Hybrid API → Edge Cache → Frontend
 ```
 
 ---
@@ -32,354 +30,124 @@ Polymarket → Fetcher → Processor → Database → API → Frontend
 
 ### Source:
 
-* Polymarket
-
-### Data Required:
-
-* Market question
-* Resolution outcome (YES / NO)
-* Market resolution timestamp
-* Wallet participation (positions)
+* Polymarket Data API (Trades)
+* Polymarket CLOB API (Market Resolutions)
 
 ---
 
-## 2.2 Data Fetcher
+## 2.2 Data Fetcher (Incremental Sync Engine)
 
-### File:
-
-```text
-/lib/fetcher.ts
-```
+📁 `/lib/fetcher.ts`
 
 ### Responsibilities:
 
-* Fetch markets data
-* Filter:
-
-  * Resolved markets
-  * Last 24 hours
+*   **Heartbeat**: Consult `meta` table for `last_processed_time`.
+*   **Fetch**: Pull new trades since heartbeat.
+*   **Deduplication**: Enforce `PRIMARY KEY (id)` on trades.
 
 ---
 
-### Output Format:
+## 2.3 Filtering & Processor
 
-```json
-[
-  {
-    "question": "...",
-    "outcome": "YES",
-    "resolved_at": "timestamp",
-    "participants": [
-      {
-        "wallet": "0xabc",
-        "position": "YES"
-      }
-    ]
-  }
-]
-```
+### Rules:
+
+*   Asset: BTC / Bitcoin.
+*   Interval: 15 minutes OR 5 minutes.
+*   Resolution check via CLOB API tokens winner flag.
 
 ---
 
-## 2.3 Filtering Module
+## 2.4 Hybrid Aggregation Strategy
 
-### Responsibilities:
+The system uses a two-tier approach for leaderboards:
 
-Filter markets based on:
+### A. 24h Leaderboard (Dynamic)
+*   **Source**: `trades` table.
+*   **Method**: SQL-level `GROUP BY`.
+*   **Logic**:
+    ```sql
+    SELECT wallet, 
+           COUNT(*) as total_trades, 
+           SUM(CASE WHEN is_win THEN 1 ELSE 0 END) as wins,
+           MAX(timestamp) as last_updated
+    FROM trades
+    WHERE timestamp >= NOW() - INTERVAL '24 hours'
+    GROUP BY wallet
+    HAVING COUNT(*) >= 5
+    ORDER BY (wins::float / COUNT(*)) * ln(COUNT(*)) DESC
+    LIMIT 50;
+    ```
 
----
-
-### Asset Filter:
-
-```text
-BTC or Bitcoin
-```
-
----
-
-### Interval Filter:
-
-```text
-"15 minutes"
-```
-
----
-
-### Rule:
-
-```text
-If not clearly matching → skip
-```
+### B. Overall Leaderboard (Precomputed)
+*   **Source**: `leaderboard_stats` table.
+*   **Sorting**: Precomputed `score` column.
 
 ---
 
----
+## 2.5 Database Layer (Supabase/Postgres)
 
-## 2.4 Processor (CORE ENGINE)
-
-### File:
-
-```text
-/lib/processor.ts
-```
-
----
-
-### Responsibilities:
-
-* Evaluate each market
-* Determine win/loss
-* Aggregate wallet stats
-
----
-
-### Core Logic:
-
-```text
-1 wallet = 1 result per market
-```
-
----
-
-### Algorithm:
-
-For each market:
-
-1. Get final outcome
-2. Loop participants
-3. For each wallet:
-
-   * Compare position vs outcome
-   * If match → win
-
----
-
-### Aggregation:
-
-```text
-wallet → wins, total_trades
-```
-
----
-
----
-
-## 2.5 Aggregation & Ranking
-
----
-
-### Daily Ranking:
-
-* Sort by wins DESC
-* Limit 50
-
----
-
-### Overall Ranking:
-
-* Sum wins across all dates
-* Sort DESC
-* Limit 100
-
----
-
----
-
-## 2.6 Database Layer
-
----
-
-### Tech:
-
-* Supabase (PostgreSQL)
-
----
-
-### Table: wallet_stats
-
+### Table: trades
 ```sql
-wallet_address TEXT
-wins INT
-total_trades INT
-win_rate FLOAT
-date DATE
+id TEXT PRIMARY KEY,
+wallet TEXT,
+market_id TEXT,
+market_type TEXT, -- 'btc_5m' or 'btc_15m'
+outcome TEXT,
+is_win BOOLEAN,
+timestamp TIMESTAMPTZ
 ```
 
----
-
-### Constraints:
-
+### Table: leaderboard_stats
 ```sql
-UNIQUE(wallet_address, date)
+wallet TEXT,
+market_type TEXT,
+wins INT,
+total_trades INT,
+win_rate DOUBLE PRECISION,
+score DOUBLE PRECISION, -- (wins/total_trades) * ln(total_trades)
+last_updated TIMESTAMPTZ,
+PRIMARY KEY (wallet, market_type)
 ```
+
+### Indexes:
+*   `idx_trades_market_time`: `(market_type, timestamp DESC)`
+*   `idx_leaderboard_score`: `(market_type, score DESC)`
 
 ---
 
-### Index:
+## 2.6 Edge Caching Layer
 
+All leaderboard APIs must implement aggressive caching:
+*   `Cache-Control: s-maxage=60, stale-while-revalidate=120`
+
+---
+
+## 2.7 Cleanup Task (Internal)
+
+No public endpoint. Pruning happens within the sync pipeline:
 ```sql
-CREATE INDEX idx_date_wins 
-ON wallet_stats (date, wins DESC);
+DELETE FROM trades WHERE timestamp < NOW() - INTERVAL '14 days';
 ```
-
----
-
----
-
-## 2.7 Data Storage Logic
-
----
-
-### Daily Insert:
-
-* Insert new records for each wallet
-* Do NOT delete old data
-
----
-
-### Upsert Logic:
-
-```text
-If wallet + date exists → update
-Else → insert
-```
-
----
-
----
-
-## 2.8 API Layer
-
----
-
-### 1. Daily Leaderboard API
-
-```text
-GET /api/leaderboard
-```
-
----
-
-### Logic:
-
-* Get latest date
-* Fetch top 50 wallets
-
----
-
-### Query:
-
-```sql
-SELECT *
-FROM wallet_stats
-WHERE date = (SELECT MAX(date) FROM wallet_stats)
-ORDER BY wins DESC
-LIMIT 50;
-```
-
----
-
----
-
-### 2. Overall Leaderboard API
-
-```text
-GET /api/leaderboard/overall
-```
-
----
-
-### Query:
-
-```sql
-SELECT 
-  wallet_address,
-  SUM(wins) AS total_wins,
-  SUM(total_trades) AS total_trades
-FROM wallet_stats
-GROUP BY wallet_address
-ORDER BY total_wins DESC
-LIMIT 100;
-```
-
----
-
----
-
-## 2.9 Cron System
-
----
-
-### File:
-
-```text
-/scripts/cron-job.ts
-```
-
----
-
-### Trigger:
-
-* Once daily (00:00 UTC)
-
----
-
-### Flow:
-
-```text
-1. Fetch markets
-2. Filter BTC + 15m
-3. Process wallet stats
-4. Sort top 50
-5. Insert into DB (no delete)
-```
-
----
-
----
-
-## 2.10 Cron API Endpoint
-
-```text
-/api/cron
-```
-
----
-
-### Responsibilities:
-
-* Trigger full pipeline
-* Return success/failure
-
----
 
 ---
 
 # 🔄 3. DATA FLOW
 
----
-
-## End-to-End Flow
-
 ```text
-Cron Trigger
+Cron Sync
    ↓
-Fetch Markets
+Fetch NEW Trades
    ↓
-Filter BTC + 15m
+Resolve Winners (CLOB API)
    ↓
-Process Wins
+Upsert to Trades Table
    ↓
-Aggregate Wallet Stats
+Incremental Update to leaderboard_stats
    ↓
-Store Daily Data
+Internal Pruning (> 14 days)
    ↓
-API Query
-   ↓
-Frontend Display
+API (SWR Caching)
 ```
-
----
 
 ---
 
@@ -504,19 +272,8 @@ DB insert success
 
 ---
 
-## 🎯 System Type:
-
-```text
-Batch processing + analytics system
-```
-
----
-
-## 🔑 Core Engine:
-
-```text
-Processor (win calculation logic)
-```
+## 🎯 System Principle:
+Accuracy + Performance + Professional UX (Hidden Weighted Ranking)
 
 ---
 

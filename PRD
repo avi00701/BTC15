@@ -179,7 +179,7 @@ Top Traders (All Time)
 
 ---
 
-# ⚙️ 6. FUNCTIONAL REQUIREMENTS
+# 🧠 6. FUNCTIONAL REQUIREMENTS
 
 ---
 
@@ -191,9 +191,8 @@ System must:
 2. Filter:
 
    * BTC only
-   * 15-minute markets
+   * 15-minute & 5-minute markets
    * Resolved markets
-   * Last 24 hours
 
 ---
 
@@ -204,13 +203,7 @@ A market is valid if:
 * Contains:
 
   * “BTC” or “Bitcoin”
-  * “15 minutes”
-
-If unclear:
-
-```text
-Skip market
-```
+  * “15 minutes” or “5 minutes”
 
 ---
 
@@ -224,35 +217,28 @@ For each market:
 
 ---
 
-### Logic:
-
-* If prediction matches outcome → WIN
-* Else → LOSS
-
----
-
 ## 📊 6.4 AGGREGATION
 
 For each wallet:
 
 * Wins count
 * Total trades count
-* Win rate calculation
+* Win rate calculation (decimal normalized)
 
 ---
 
-## 🏆 6.5 RANKING
+## 🏆 6.5 RANKING (WEIGHTED SCORE)
 
-### Daily:
+Ranking is based on a weighted formula to prevent high-win-rate, low-volume gaming.
 
-* Sort by wins DESC
-* Top 50
+```text
+score = (wins / total_trades) * ln(total_trades)
+```
 
-### Overall:
-
-* Sum wins across all dates
-* Sort DESC
-* Top 100
+**Rules:**
+*   **Min Trades Filter**: Minimum 5 trades required to appear on any leaderboard.
+*   **Score Protection**: Score is 0 if `total_trades <= 1`.
+*   **UX Policy**: Score is HIDDEN from users. Display `Win % + Total Trades`.
 
 ---
 
@@ -262,28 +248,46 @@ For each wallet:
 
 System must:
 
-* Store daily results
-* NOT delete old data
-* Prevent duplicates
+* Store all trade history for tracking.
+* **14-Day Retention**: Raw trade records are pruned after 14 days for performance.
+* Prevent duplicates via Unique Trade ID enforcement.
 
 ---
 
 ---
 
-## 🔁 6.7 DATA UPDATE
+## 🔁 6.7 DATA UPDATE (PRO PIPELINE)
 
-### Frequency:
+### F. Incremental Sync Engine
+The pipeline stores a `last_processed_time` and only fetches NEW trades since the last heartbeat, ensuring high scalability and no duplicate processing.
 
-* Once every 24 hours
+---
+
+### G. Weighted Ranking Engine
+To prevent low-volume manipulation, rankings are calculated using the logarithmic weighted formula (ln).
 
 ---
 
-### Logic:
-
-* Always recompute last 24h data
-* Insert new records
+### H. Fault Tolerance
+*   **Retries**: Automatic retry for CLOB or Data API failures.
+*   **Graceful Degradation**: Continue processing other markets if one market resolution fails.
 
 ---
+
+### I. Caching Layer
+API responses are cached at the edge using `s-maxage=60, stale-while-revalidate=120` to reduce DB load and ensure 1s page loads.
+
+---
+
+### J. Data Retention Strategy
+Old trade data (> 14 days) is periodically pruned as an internal task within the cron sync.
+
+---
+
+### K. UI State Management
+Frontend reactive state handles toggling between:
+*   **Market Types**: btc_5m vs btc_15m
+*   **Timeframes**: 24h (dynamic) vs All-time (stat-table)
 
 ---
 
@@ -294,21 +298,22 @@ System must:
 ## ⚡ Performance
 
 * Page load < 1 second
-* Fast API response
+* Edge-cached APIs
+* DB-level aggregation for 24h views
 
 ---
 
 ## 📈 Scalability
 
-* Support growing dataset
-* Efficient queries
+* Support growing dataset via indexing
+* Efficient SQL group-by queries
 
 ---
 
 ## 🔒 Reliability
 
-* Accurate data
-* No duplicate records
+* Accurate data sync
+* Duplicate ID protection
 * Stable cron execution
 
 ---
@@ -316,7 +321,7 @@ System must:
 ## 🎨 UX
 
 * Clean UI
-* Minimal design
+* **No Score Display**: Users see Wins/Trades/Rate
 * Mobile responsive
 
 ---
@@ -327,40 +332,21 @@ System must:
 
 ## ❗ Multiple trades per wallet
 
-👉 Count as ONE result
-
----
-
-## ❗ Unclear markets
-
-👉 Skip
-
----
-
-## ❗ No valid markets
-
-👉 Show:
-
-```text
-"No data available"
-```
+👉 Count as ONE result per market ID
 
 ---
 
 ## ❗ Low sample wallets
 
-👉 Optional:
-
-* Minimum trades filter (≥ 5)
+👉 **Min Trades Filter (≥ 5)** enforced in leaderboard views
 
 ---
 
 # 📊 9. SUCCESS METRICS
 
 * Accuracy of leaderboard
-* User engagement
-* Data freshness
-* Performance speed
+* Page load performance (< 1s)
+* No duplicate records in `trades`
 
 ---
 
@@ -370,31 +356,18 @@ System must:
 
 ## ✅ INCLUDE
 
-* Daily leaderboard
-* Overall leaderboard
-* Backend processing
-* Cron job
-* API
-* UI
-
----
-
-## ❌ EXCLUDE
-
-* Multi-assets (ETH, SOL)
-* Real-time updates
-* Alerts
-* Social features
+* Daily/Overall leaderboards (Hybrid)
+* Incremental Sync
+* Weighted ranking (hidden)
+* 14-day retention cycle
 
 ---
 
 # 🔮 11. FUTURE FEATURES
 
-* ETH / SOL leaderboards
-* Real-time leaderboard
+* Multi-asset expansion (ETH, SOL)
 * Wallet profile pages
-* Smart money signals
-* Notifications
+* Smart money alerts
 
 ---
 
@@ -405,7 +378,7 @@ System must:
 ## 🎯 You are building:
 
 ```text
-A high-accuracy crypto trader leaderboard
+A professional-grade, high-accuracy btc prediction leaderboard
 ```
 
 ---
@@ -413,13 +386,5 @@ A high-accuracy crypto trader leaderboard
 ## 💡 Core Strength:
 
 ```text
-Simple + Focused + Data-driven
-```
-
----
-
-## 🧠 Key Differentiator:
-
-```text
-BTC 15min precision tracking
+Log-weighted precision + Batch performance
 ```

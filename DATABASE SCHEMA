@@ -1,223 +1,70 @@
-DATABASE SCHEMA (VISUAL DIAGRAM)
+DATABASE SCHEMA (PRO-GRADE)
 
 ```text
                 ┌──────────────────────────────┐
-                │        wallet_stats          │
+                │          trades              │
                 ├──────────────────────────────┤
-                │ id (PK)                      │
-                │ wallet_address (TEXT)        │
+                │ id (PK) (TEXT)               │
+                │ wallet (TEXT)                │
+                │ market_id (TEXT)             │
+                │ market_type (TEXT)           │
+                │ outcome (TEXT)               │
+                │ is_win (BOOLEAN)             │
+                │ timestamp (TIMESTAMPTZ)      │
+                └──────────────────────────────┘
+                               │
+                               ▼
+                ┌──────────────────────────────┐
+                │      leaderboard_stats       │
+                ├──────────────────────────────┤
+                │ wallet (PK) (TEXT)           │
+                │ market_type (PK) (TEXT)      │
                 │ wins (INT)                   │
                 │ total_trades (INT)           │
-                │ win_rate (FLOAT)             │
-                │ date (DATE)                  │
-                │ created_at (TIMESTAMP)       │
+                │ win_rate (DOUBLE PRECISION)  │
+                │ score (DOUBLE PRECISION)     │
+                │ last_updated (TIMESTAMPTZ)   │
                 └──────────────────────────────┘
 ```
 
 ---
 
-# 🧠 TABLE EXPLANATION (SIMPLE)
+# 🧠 TABLE EXPLANATION
 
-## 🟢 `wallet_stats`
+## 🟢 1. `trades`
+Stores every individual trade fetched from Polymarket.
+*   **id**: Unique trade ID from Polymarket (Primary Key).
+*   **market_type**: 'btc_5m' or 'btc_15m'.
+*   **is_win**: Resolved outcome comparison.
+*   **Retention**: Rows older than 14 days are automatically pruned.
 
-This is your **only table (simple system)**
-
----
-
-## 🔹 Columns
-
-### 1. `id`
-
-* Primary key
-* Auto-generated
-
----
-
-### 2. `wallet_address`
-
-* Wallet ID (e.g., `0xabc...`)
-* Used for grouping
+## 🟢 2. `leaderboard_stats`
+Precomputed aggregation for All-Time performance.
+*   **PK**: Composite (wallet, market_type).
+*   **score**: Computed as `(wins / total_trades) * ln(total_trades)`.
+*   **win_rate**: Decimal (0-1).
 
 ---
 
-### 3. `wins`
+# ⚡ INDEXES (CRITICAL FOR SCALING)
 
-* Number of correct predictions
-* For that day
-
----
-
-### 4. `total_trades`
-
-* Total predictions made
-* For that day
-
----
-
-### 5. `win_rate`
-
-```text
-wins / total_trades * 100
-```
-
----
-
-### 6. `date`
-
-* Represents **which day this data belongs to**
-* Example:
-
-```text
-2026-03-27
-```
-
----
-
-### 7. `created_at`
-
-* Timestamp when record inserted
-
----
-
-# 🧠 DATA EXAMPLE
-
-| wallet | wins | total | date |
-| ------ | ---- | ----- | ---- |
-| 0xabc  | 10   | 20    | 27   |
-| 0xabc  | 5    | 10    | 28   |
-
----
-
-# 🧠 HOW OVERALL LEADERBOARD WORKS
-
-👉 It aggregates:
-
-```text
-0xabc → (10 + 5) = 15 wins
-```
-
----
-
-# ⚙️ IMPORTANT CONSTRAINTS
-
----
-
-## 🔒 UNIQUE CONSTRAINT (VERY IMPORTANT)
-
+### 1. Trade Sync Index
+Used for fast 24h dynamic aggregation.
 ```sql
-UNIQUE(wallet_address, date)
+CREATE INDEX idx_trades_market_time 
+ON trades (market_type, timestamp DESC);
 ```
 
-👉 Prevents:
-
-* Duplicate entries for same day
-
----
-
-# ⚡ INDEXES (PERFORMANCE)
-
+### 2. Leaderboard Score Index
+Used for near-instant Overall Leaderboard sorting.
 ```sql
-CREATE INDEX idx_date_wins 
-ON wallet_stats (date, wins DESC);
+CREATE INDEX idx_leaderboard_score 
+ON leaderboard_stats (market_type, score DESC);
 ```
 
 ---
 
-👉 Helps:
-
-* Fast daily leaderboard
-
----
-
-# 🧠 OPTIONAL INDEX (OVERALL)
-
-```sql
-CREATE INDEX idx_wallet 
-ON wallet_stats (wallet_address);
-```
-
----
-
-👉 Helps:
-
-* Faster aggregation
-
----
-
-# 🧠 HOW DATA FLOWS INTO TABLE
-
-```text
-Cron runs daily
-   ↓
-Fetch BTC 15m markets
-   ↓
-Compute wallet stats
-   ↓
-Insert rows into wallet_stats
-```
-
----
-
-# 🧠 HOW APIs USE THIS TABLE
-
----
-
-## 🟢 DAILY API
-
-```sql
-SELECT *
-FROM wallet_stats
-WHERE date = latest_date
-ORDER BY wins DESC
-LIMIT 50;
-```
-
----
-
-## 🟣 OVERALL API
-
-```sql
-SELECT 
-  wallet_address,
-  SUM(wins) AS total_wins,
-  SUM(total_trades) AS total_trades
-FROM wallet_stats
-GROUP BY wallet_address
-ORDER BY total_wins DESC
-LIMIT 100;
-```
-
----
-
-# 🧠 WHY THIS SCHEMA IS GOOD
-
-👉 Simple
-👉 Scalable
-👉 Easy to debug
-👉 No over-engineering
-
----
-
-# ⚠️ LIMITATION (FUTURE)
-
-Later you may need:
-
-* Separate tables
-* Raw trade storage
-
-But for now:
-
-```text
-This is PERFECT ✅
-```
-
----
-
-# 🏁 FINAL SUMMARY
-
-👉 You have:
-
-```text
-One table → wallet_stats
-Stores daily results
-Aggregates for overall leaderboard
+# ⚙️ DATA INTEGRITY RULES
+1.  **Deduplication**: `trades` uses `upsert` on the `id` Primary Key.
+2.  **Accuracy**: All stats use `DOUBLE PRECISION` to avoid rounding drift.
+3.  **Min Trades Filter**: Enforced in API (>= 5), not in storage.
