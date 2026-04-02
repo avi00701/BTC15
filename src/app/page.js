@@ -246,7 +246,47 @@ export default function Home() {
         }
         @keyframes pulse-green { 0% { opacity: 1; transform: scale(1); filter: brightness(1.2); } 100% { opacity: 0.7; transform: scale(1.4); filter: brightness(1.5); } }
 
-        .header h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 12px; }
+        .header { 
+          position: relative; 
+          margin-bottom: 48px; 
+          padding: 20px 0;
+        }
+        .header-trace {
+          position: absolute;
+          inset: -10px -20px;
+          border: 1px solid rgba(45, 69, 216, 0.1);
+          pointer-events: none;
+          overflow: hidden;
+        }
+        .header-trace::after {
+          content: '';
+          position: absolute;
+          width: 80px;
+          height: 2px;
+          background: #2D45D8;
+          box-shadow: 0 0 15px #2D45D8, 0 0 30px #2D45D8;
+          animation: laser-path 6s linear infinite;
+        }
+        @keyframes laser-path {
+          0% { top: 0; left: -80px; width: 80px; height: 2px; }
+          25% { top: 0; left: 100%; width: 80px; height: 2px; }
+          26% { top: 0; left: 100%; width: 2px; height: 80px; }
+          50% { top: 100%; left: 100%; width: 2px; height: 80px; }
+          51% { top: 100%; left: 100%; width: 80px; height: 2px; }
+          75% { top: 100%; left: -80px; width: 80px; height: 2px; }
+          76% { top: 100%; left: 0; width: 2px; height: 80px; }
+          100% { top: -80px; left: 0; width: 2px; height: 80px; }
+        }
+
+        .header h1 { 
+          font-size: clamp(32px, 5vw, 56px); 
+          font-weight: 800; 
+          text-transform: uppercase; 
+          letter-spacing: -0.04em; 
+          margin-bottom: 0; 
+          position: relative;
+          z-index: 1;
+        }
         .header-sub { font-size: 14px; color: #737373; max-width: 600px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.6; }
 
         .bracket-box {
@@ -340,12 +380,12 @@ export default function Home() {
 
         <div className="page-wrapper">
           <div className="header">
+            <div className="header-trace" />
             <div className="sys-status">
               <span className="live-dot" />
               DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
             </div>
             <h1>Polymarket Leaderboard</h1>
-
           </div>
 
           <div className="market-tabs">
