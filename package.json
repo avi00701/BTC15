@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.0",
+    "@vercel/analytics": "^2.0.1",
     "axios": "^1.14.0",
     "dayjs": "^1.11.20",
     "lucide-react": "^1.7.0",
