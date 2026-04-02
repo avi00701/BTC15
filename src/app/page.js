@@ -81,9 +81,9 @@ function LeaderboardTable({ data, loading }) {
           <thead>
             <tr>
               <th>Rank</th>
-              <th>Operator</th>
+              <th>Profile</th>
               <th>Wins</th>
-              <th>Executions</th>
+              <th>Total Trade</th>
               <th>Win %</th>
               <th>Last Win</th>
             </tr>
@@ -309,19 +309,19 @@ export default function Home() {
 
         .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 48px; }
         .hud-stat { display: flex; flex-direction: column; gap: 12px; }
-        .hud-stat .label { font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 800; letter-spacing: 0.2em; margin-bottom: 4px; }
+        .hud-stat .label { font-size: 13px; color: #94A3B8; text-transform: uppercase; font-weight: 800; letter-spacing: 0.2em; margin-bottom: 4px; }
         .hud-stat .value { 
-          font-size: 38px; color: #2D45D8; font-weight: 900; 
-          text-shadow: 0 0 10px rgba(45, 69, 216, 0.5), 0 0 25px rgba(45, 69, 216, 0.3); 
+          font-size: 42px; color: #2D45D8; font-weight: 900; 
+          text-shadow: 0 0 15px rgba(45, 69, 216, 0.6), 0 0 35px rgba(45, 69, 216, 0.4); 
           letter-spacing: -0.02em;
         }
 
         .market-tabs { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
         .market-btn {
-          padding: 18px 32px; border: 2px solid #1e1e1e; background: rgba(15, 10, 30, 0.4);
-          color: #64748B; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit;
+          padding: 20px 36px; border: 2px solid #1e1e1e; background: rgba(15, 10, 30, 0.4);
+          color: #94A3B8; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit;
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); position: relative; min-width: 200px;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.05em; font-size: 14px;
         }
         .market-btn.active { 
           color: #FFFFFF; border-color: #2D45D8; 
@@ -334,8 +334,8 @@ export default function Home() {
         .controls-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
         .tabs { display: flex; gap: 8px; }
         .tab-btn {
-          padding: 12px 24px; border: 2px solid #1e1e1e; background: #050505; color: #64748B;
-          font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all 0.2s;
+          padding: 14px 28px; border: 2px solid #1e1e1e; background: #050505; color: #94A3B8;
+          font-size: 14px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all 0.2s;
           letter-spacing: 0.05em;
         }
         .tab-btn.active { 
@@ -352,19 +352,20 @@ export default function Home() {
 
         .leaderboard-table { width: 100%; border-collapse: collapse; }
         .leaderboard-table th {
-          padding: 20px 24px; text-align: left; font-size: 10px; color: #737373; text-transform: uppercase;
-          border-bottom: 2px solid #262626; letter-spacing: 0.1em;
+          padding: 24px 28px; text-align: left; font-size: 13px; color: #94A3B8; text-transform: uppercase;
+          border-bottom: 2px solid #262626; letter-spacing: 0.12em; font-weight: 900;
         }
         .table-row { border-bottom: 1px solid #1a1a1a; transition: background 0.2s; }
-        .table-row:hover { background: rgba(45, 69, 216, 0.05); }
-        .leaderboard-table td { padding: 18px 24px; font-size: 14px; color: #A3A3A3; }
-        .rank-cell { font-weight: 900; color: #2D45D8 !important; width: 80px; text-shadow: 0 0 10px rgba(45, 69, 216, 0.4); font-size: 16px; }
+        .table-row:hover { background: rgba(45, 69, 216, 0.08); }
+        .leaderboard-table td { padding: 22px 28px; font-size: 16px; color: #F8FAFC; border-bottom: 1px solid #141414; }
+        .rank-cell { font-weight: 900; color: #2D45D8 !important; width: 80px; text-shadow: 0 0 10px rgba(45, 69, 216, 0.4); font-size: 18px; }
         .wallet-link { color: #F8FAFC; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
         .wallet-link:hover { color: #2D45D8; text-shadow: 0 0 8px rgba(45, 69, 216, 0.5); }
         .wins-badge { 
-          font-weight: 900; color: #FFF; font-size: 18px; 
-          background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 4px;
+          font-weight: 900; color: #FFF; font-size: 20px; 
+          background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px;
           border: 1px solid rgba(255,255,255,0.1);
+          text-shadow: 0 0 8px rgba(255,255,255,0.2);
         }
         .winrate-badge { font-weight: 900; letter-spacing: 0.02em; }
 
@@ -442,7 +443,7 @@ export default function Home() {
           <LeaderboardTable data={displayData} loading={displayLoading} />
 
           <div className="footer-note">
-            * RANKING ENFORCED VIA WEIGHTED LOGARITHMIC SCORING. MINIMUM 5 EXECUTIONS REQUIRED FOR REGISTRY.
+            * RANKING ENFORCED VIA WEIGHTED LOGARITHMIC SCORING. MINIMUM 5 TOTAL TRADES REQUIRED FOR REGISTRY.
           </div>
         </div>
       </div>
