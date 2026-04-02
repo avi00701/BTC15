@@ -225,6 +225,28 @@ export default function Home() {
           to { background-position: center, 0 1000px, 1000px 0; }
         }
 
+        .global-perimeter {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 10;
+          overflow: hidden;
+          border-radius: 4px;
+        }
+        .global-trace {
+          position: absolute;
+          inset: -150%;
+          background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 330deg, rgba(45, 69, 216, 0.4) 350deg, #2D45D8 360deg);
+          animation: rotate-beam 12s linear infinite;
+        }
+        .global-perimeter::after {
+          content: "";
+          position: absolute;
+          inset: 1px;
+          border: 1px solid rgba(45, 69, 216, 0.05);
+          border-radius: inherit;
+        }
+
         .sys-status {
           display: inline-flex;
           align-items: center;
@@ -370,6 +392,9 @@ export default function Home() {
         <div className="vignette" />
 
         <div className="page-wrapper">
+          <div className="global-perimeter">
+            <div className="global-trace" />
+          </div>
           <div className="header">
             <div className="sys-status">
               <span className="live-dot" />
