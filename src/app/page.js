@@ -225,26 +225,39 @@ export default function Home() {
           to { background-position: center, 0 1000px, 1000px 0; }
         }
 
-        .global-perimeter {
+        .title-container {
+          position: relative;
+          display: inline-block;
+          padding: 16px 40px;
+          border-radius: 2px;
+          background: rgba(0, 0, 0, 0.6);
+          border: 1px solid rgba(45, 69, 216, 0.2);
+          overflow: hidden;
+          margin-top: 12px;
+        }
+        .laser-trace {
           position: absolute;
           inset: 0;
           pointer-events: none;
-          z-index: 10;
-          overflow: hidden;
-          border-radius: 4px;
         }
-        .global-trace {
-          position: absolute;
-          inset: -150%;
-          background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 330deg, rgba(45, 69, 216, 0.4) 350deg, #2D45D8 360deg);
-          animation: rotate-beam 12s linear infinite;
-        }
-        .global-perimeter::after {
+        .laser-trace::after {
           content: "";
           position: absolute;
-          inset: 1px;
-          border: 1px solid rgba(45, 69, 216, 0.05);
-          border-radius: inherit;
+          width: 80px;
+          height: 3px;
+          background: #2D45D8;
+          box-shadow: 0 0 15px #2D45D8, 0 0 30px #2D45D8;
+          animation: laser-rect 4s linear infinite;
+        }
+        @keyframes laser-rect {
+          0% { top: 0; left: -80px; width: 80px; height: 3px; }
+          25% { top: 0; left: 100%; width: 80px; height: 3px; }
+          25.01% { top: 0; left: calc(100% - 3px); width: 3px; height: 80px; }
+          50% { top: 100%; left: calc(100% - 3px); width: 3px; height: 80px; }
+          50.01% { top: calc(100% - 3px); left: 100%; width: 80px; height: 3px; }
+          75% { top: calc(100% - 3px); left: -80px; width: 80px; height: 3px; }
+          75.01% { top: 100%; left: 0; width: 3px; height: 80px; }
+          100% { top: -80px; left: 0; width: 3px; height: 80px; }
         }
 
         .sys-status {
@@ -270,37 +283,6 @@ export default function Home() {
 
         .header h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.04em; margin-bottom: 0; position: relative; z-index: 2; }
         .header-sub { font-size: 14px; color: #737373; max-width: 600px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.6; }
-
-        .title-container {
-          position: relative;
-          display: inline-block;
-          padding: 16px 40px;
-          border-radius: 4px;
-          background: rgba(0, 0, 0, 0.4);
-          border: 1px solid rgba(45, 69, 216, 0.1);
-          overflow: hidden;
-          margin-top: 12px;
-        }
-        .border-beam {
-          position: absolute;
-          inset: -100%;
-          background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 300deg, #2D45D8 340deg, #60A5FA 360deg);
-          animation: rotate-beam 4s linear infinite;
-          pointer-events: none;
-        }
-        .title-container::after {
-          content: "";
-          position: absolute;
-          inset: 1px;
-          background: #000;
-          border-radius: inherit;
-          z-index: 1;
-        }
-        @keyframes rotate-beam {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
 
         .bracket-box {
           position: relative; padding: 28px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
@@ -392,16 +374,13 @@ export default function Home() {
         <div className="vignette" />
 
         <div className="page-wrapper">
-          <div className="global-perimeter">
-            <div className="global-trace" />
-          </div>
           <div className="header">
             <div className="sys-status">
               <span className="live-dot" />
               DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
             </div>
             <div className="title-container">
-              <div className="border-beam" />
+              <div className="laser-trace" />
               <h1>Polymarket BTC Leaderboard</h1>
             </div>
           </div>
