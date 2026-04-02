@@ -244,27 +244,30 @@ export default function Home() {
         }
         .laser-trace {
           position: absolute;
-          inset: 0;
+          inset: 0px;
           pointer-events: none;
+          z-index: 0;
+          overflow: hidden;
         }
         .laser-trace::after {
           content: "";
           position: absolute;
-          width: 80px;
-          height: 3px;
-          background: #2D45D8;
-          box-shadow: 0 0 15px #2D45D8, 0 0 30px #2D45D8;
-          animation: laser-rect 4s linear infinite;
+          inset: -200%;
+          background: conic-gradient(
+            from 0deg,
+            transparent 0%,
+            transparent 20%,
+            rgba(45, 69, 216, 1) 25%,
+            rgba(16, 185, 129, 1) 27%,
+            rgba(45, 69, 216, 1) 30%,
+            transparent 35%,
+            transparent 100%
+          );
+          animation: beam-rotate 4s linear infinite;
         }
-        @keyframes laser-rect {
-          0% { top: 0; left: -80px; width: 80px; height: 3px; }
-          25% { top: 0; left: 100%; width: 80px; height: 3px; }
-          25.01% { top: 0; left: calc(100% - 3px); width: 3px; height: 80px; }
-          50% { top: 100%; left: calc(100% - 3px); width: 3px; height: 80px; }
-          50.01% { top: calc(100% - 3px); left: 100%; width: 80px; height: 3px; }
-          75% { top: calc(100% - 3px); left: -80px; width: 80px; height: 3px; }
-          75.01% { top: 100%; left: 0; width: 3px; height: 80px; }
-          100% { top: -80px; left: 0; width: 3px; height: 80px; }
+        @keyframes beam-rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         .sys-status {
@@ -292,8 +295,9 @@ export default function Home() {
         .header-sub { font-size: 14px; color: #737373; max-width: 600px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.6; }
 
         .bracket-box {
-          position: relative; padding: 28px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
+          position: relative; padding: 28px; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px);
           border: 1px solid rgba(45, 69, 216, 0.1); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: 1;
         }
         .bracket-box:hover { border-color: rgba(45, 69, 216, 0.5); background: rgba(45, 69, 216, 0.04); box-shadow: inset 0 0 20px rgba(45, 69, 216, 0.1); }
         .bracket-box .corner { position: absolute; width: 16px; height: 16px; border: 0 solid #2D45D8; transition: all 0.3s; opacity: 0.4; }
@@ -386,9 +390,10 @@ export default function Home() {
               <span className="live-dot" />
               DATALINK: ACTIVE // {market.replace("_", " ").toUpperCase()} // {activeTab.toUpperCase()}
             </div>
-            <div className="title-container">
+            <div className="title-container" style={{ position: 'relative', background: '#000', overflow: 'hidden' }}>
               <div className="laser-trace" />
-              <h1>Polymarket BTC Leaderboard</h1>
+              <div style={{ position: 'absolute', inset: '1px', background: '#000', zIndex: 1, borderRadius: '4px' }} />
+              <h1 style={{ position: 'relative', zIndex: 2 }}>Polymarket BTC Leaderboard</h1>
             </div>
           </div>
 
