@@ -19,10 +19,18 @@ function checkRateLimit(ip) {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://fndwcckgsihrrmpvnyxd.supabase.co",
-    "sb_publishable_WB7QOKNRUtixfnXtEgGcdA_jn50L-Mn"
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    console.error(`[API Overall] Missing environment variables. url=${!!url}, anonKey=${!!anonKey}`);
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  const supabase = createClient(url, anonKey);
 
   try {
     // Basic IP extraction for Next.js App Router (may be forwarded by Vercel)
