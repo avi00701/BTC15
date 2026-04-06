@@ -76,7 +76,9 @@ function normalizeTrade(t, market) {
     market_id: market.conditionId,
     market_type: market.marketType,
     outcome: t.outcome,
-    timestamp: formatTimestamp(t.timestamp || t.time)
+    timestamp: formatTimestamp(t.timestamp || t.time),
+    is_win: null, // Default to Pending (3-state model)
+    resolution_status: 'pending'
   };
 }
 
@@ -100,13 +102,13 @@ export async function GET(req) {
     });
   } catch (err) {
     console.error("[Pipeline] Fatal error:", err.message);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.stack }, { status: 500 });
   }
 }
 
 async function processLeaderboard(forceAll = false) {
   const supabase = getSupabase();
-  console.log(`[Pipeline] Unified Sync Started (forceAll: ${forceAll})`);
+  console.log(`[Pipeline] Core Sync Started (forceAll: ${forceAll})`);
 
   const now = Math.floor(Date.now() / 1000);
   const hourWindow = forceAll ? 24 : 3;
@@ -122,6 +124,7 @@ async function processLeaderboard(forceAll = false) {
   // 1. DISCOVERY (Slug Prediction + Fallback)
   for (const bucket of buckets) {
     const slugs = [];
+    // Predict slugs for the target window
     for (let t = Math.floor(now / bucket.interval) * bucket.interval; t >= startOfWindow; t -= bucket.interval) {
       slugs.push(bucket.prefix + t);
     }
@@ -136,11 +139,12 @@ async function processLeaderboard(forceAll = false) {
           if (data && data[0]) bucketMarkets.push({ ...data[0], marketType: bucket.type });
         } catch (err) {}
       }));
+      // Limit markets per type to keep execution under Vercel limits
       if (bucketMarkets.length >= (forceAll ? 15 : MAX_MARKETS_PER_TYPE)) break;
     }
 
     if (bucketMarkets.length === 0) {
-      console.warn(`[Pipeline] Slug prediction returned 0 for ${bucket.type}. Fallback to search...`);
+      console.warn(`[Pipeline] Slug prediction failed for ${bucket.type}. Fallback to search...`);
       try {
         const query = bucket.type === "btc_5m" ? "btc-updown-5m" : "btc-updown-15m";
         const searchRes = await fetchWithRetry(`https://gamma-api.polymarket.com/markets?active=true&limit=50&tagId=100609`); 
@@ -149,7 +153,7 @@ async function processLeaderboard(forceAll = false) {
           (m.slug?.includes(query) || m.question?.toLowerCase().includes(bucket.type.replace("btc_", "").replace("m", " minute")))
         );
         bucketMarkets.push(...fallbackMarkets.map(m => ({ ...m, marketType: bucket.type })));
-      } catch (err) { console.error(`[Pipeline] Fallback discovery failed: ${err.message}`); }
+      } catch (err) { console.error(`[Pipeline] Fallback failed: ${err.message}`); }
     }
 
     validMarkets.push(...bucketMarkets.slice(0, forceAll ? 20 : MAX_MARKETS_PER_TYPE));
@@ -158,17 +162,19 @@ async function processLeaderboard(forceAll = false) {
   console.log(`[Pipeline] Discovery resolved ${validMarkets.length} markets.`);
   if (validMarkets.length === 0) return { count: 0, marketCount: 0, healthStatus: "FAIL" };
 
-  // 2. FETCH TRADES (Multi-Source + Resilience)
+  // 2. FETCH TRADES (Per-Market to fix starvation)
   const allFetchedTrades = [];
   const cutoff = startOfWindow * 1000;
 
   for (const market of validMarkets) {
     try {
       let trades = [];
+      // Primary: CLOB API for better depth
       const clobRes = await fetchWithRetry(`https://clob.polymarket.com/trades?market=${market.conditionId}&limit=${TRADES_PER_MARKET}`);
       if (clobRes.ok) {
         trades = await clobRes.json();
       } else {
+        // Fallback: Data-API via Event ID resolution
         try {
           const eventRes = await fetchWithRetry(`https://gamma-api.polymarket.com/events?slug=${market.slug}`);
           const eventData = await eventRes.json();
@@ -181,90 +187,114 @@ async function processLeaderboard(forceAll = false) {
             if (dataRes.ok) {
               const fetched = await dataRes.json();
               trades = Array.isArray(fetched) ? fetched : [];
-              console.log(`[Data-API] Resolved eventId ${targetEventId} for ${market.slug} - Found ${trades.length} trades`);
             }
           }
-        } catch (resErr) { console.error(`[Pipeline] Event resolution failed for ${market.slug}`); }
+        } catch (resErr) {}
       }
 
       if (Array.isArray(trades) && trades.length > 0) {
         const normalized = trades.map(t => normalizeTrade(t, market));
         const recent = normalized.filter(t => new Date(t.timestamp).getTime() > cutoff);
         allFetchedTrades.push(...recent);
-        console.log(`[Pipeline] Captured ${recent.length} recent trades for ${market.slug}`);
+        console.log(`[Pipeline] Captured ${recent.length} trades for ${market.slug}`);
       }
-    } catch (err) { console.error(`[Pipeline] Fetch error for ${market.slug}: ${err.message}`); }
+    } catch (err) { console.error(`[Pipeline] ${market.slug} Error: ${err.message}`); }
     if (allFetchedTrades.length >= MAX_TOTAL_TRADES) break;
   }
 
   const btc5mCount = allFetchedTrades.filter(t => t.market_type === "btc_5m").length;
   const btc15mCount = allFetchedTrades.filter(t => t.market_type === "btc_15m").length;
 
-  if (btc5mCount === 0 && btc15mCount === 0) {
-    console.error("[Pipeline] CRITICAL: Zero trades after normalization.");
+  if (allFetchedTrades.length === 0) {
+    console.error("[Pipeline] Critical: No trades detected in current window.");
     await supabase.from("sync_health").insert({ btc_5m_count: 0, btc_15m_count: 0, status: "CRITICAL" });
     return { count: 0, marketCount: validMarkets.length, healthStatus: "CRITICAL" };
   }
 
-  // 3. RESOLVE WINNERS (Unified processing)
-  const finalTrades = allFetchedTrades.slice(0, MAX_TOTAL_TRADES);
-  const uniqueCids = [...new Set(finalTrades.map(t => t.market_id))];
-  const winners = {};
-  for (let i = 0; i < uniqueCids.length; i += 10) {
-    const batch = uniqueCids.slice(i, i + 10);
-    await Promise.all(batch.map(async (cid) => {
-      try {
-        const res = await fetchWithRetry(`https://clob.polymarket.com/markets/${cid}`);
-        const data = await res.json();
-        if (data?.closed) winners[cid] = data.tokens.find(t => t.winner === true)?.outcome;
-      } catch (err) {}
-    }));
-  }
+  // 3. STORAGE (New Trades default to Pending)
+  const { error: upsertError } = await supabase.from("trades").upsert(allFetchedTrades, { onConflict: "id" });
+  if (upsertError) throw new Error(`Trades Upsert Error: ${upsertError.message}`);
 
-  // 4. DATABASE UPDATES
-  const usersBatch = {};
-  const tradeUpserts = finalTrades.map(t => {
-    const isWin = !!(winners[t.market_id] && winners[t.market_id] === t.outcome);
-    const key = `${t.wallet}_${t.market_type}`;
-    if (!usersBatch[key]) usersBatch[key] = { wallet: t.wallet, market_type: t.market_type, wins: 0, total_trades: 0 };
-    usersBatch[key].total_trades++;
-    if (isWin) usersBatch[key].wins++;
-    return { ...t, is_win: isWin };
-  });
+  // 4. LOOKBACK RESOLUTION PASS (The most important part)
+  // We resolve trades where is_win IS NULL, going back up to 48h
+  await resolvePendingMarkets(supabase);
 
-  if (tradeUpserts.length > 0) {
-    const { error: upsertError } = await supabase.from("trades").upsert(tradeUpserts, { onConflict: "id" });
-    if (upsertError) throw new Error(`Trades Upsert Failed: ${upsertError.message}`);
+  // 5. UPDATE LEADERBOARD STATS (Deterministic Delta)
+  // increment_leaderboard_stats should now skip is_win IS NULL
+  const { error: syncError } = await supabase.rpc("increment_leaderboard_stats");
+  if (syncError) console.error(`[Pipeline] Stats Sync Error: ${syncError.message}`);
 
-    const wallets = Array.from(new Set(tradeUpserts.map(t => t.wallet)));
-    const { data: existingStats } = await supabase.from("leaderboard_stats").select("*").in("wallet", wallets);
-
-    const statsUpserts = Object.values(usersBatch).map(newStat => {
-      const prev = existingStats?.find(e => e.wallet === newStat.wallet && e.market_type === newStat.market_type);
-      const wins = newStat.wins + (prev?.wins || 0);
-      const total = newStat.total_trades + (prev?.total_trades || 0);
-      const winRate = total > 0 ? (wins / total) : 0;
-      const score = total > 1 ? (winRate * Math.log(total)) : 0;
-
-      return {
-        wallet: newStat.wallet,
-        market_type: newStat.market_type,
-        wins, total_trades: total,
-        win_rate: winRate * 100,
-        score, last_updated: new Date().toISOString()
-      };
-    });
-
-    await supabase.from("leaderboard_stats").upsert(statsUpserts, { onConflict: "wallet,market_type" });
-  }
+  // 6. HOUSEKEEPING
+  await supabase.from("trades").delete().lt("timestamp", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
 
   const healthStatus = (btc5mCount > 0 && btc15mCount > 0) ? "OK" : "WARNING";
   await supabase.from("sync_health").insert({ 
     btc_5m_count: btc5mCount, 
     btc_15m_count: btc15mCount, 
     status: healthStatus,
-    metadata: { processed_markets: validMarkets.length, total_trades: tradeUpserts.length }
+    metadata: { processed_markets: validMarkets.length, total_trades: allFetchedTrades.length }
   });
 
-  return { count: tradeUpserts.length, marketCount: validMarkets.length, healthStatus };
+  return { count: allFetchedTrades.length, marketCount: validMarkets.length, healthStatus };
 }
+
+/**
+ * Logic-heavy resolution of pending trades using Cache-First strategy.
+ */
+async function resolvePendingMarkets(supabase) {
+  // A. Find unique market IDs that have pending trades in our system
+  const { data: pending } = await supabase
+    .from("trades")
+    .select("market_id")
+    .is("is_win", null);
+
+  const uniqueMarketIds = [...new Set(pending?.map(t => t.market_id) || [])];
+  if (uniqueMarketIds.length === 0) return;
+
+  console.log(`[Pipeline] Resolution pass checking ${uniqueMarketIds.length} unique markets.`);
+
+  // B. Batch Resolve outcomes (Deduped at market level)
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < uniqueMarketIds.length; i += BATCH_SIZE) {
+    const batch = uniqueMarketIds.slice(i, i + BATCH_SIZE);
+    
+    await Promise.all(batch.map(async (cid) => {
+      try {
+        // 1. Check local resolution cache first
+        const { data: cache } = await supabase.from("market_resolution").select("*").eq("market_id", cid).single();
+        
+        let winningOutcome = cache?.winning_outcome;
+        let isResolved = cache?.is_resolved;
+
+        if (!isResolved) {
+           // 2. Fetch from Gamma API
+           const res = await fetch(`https://gamma-api.polymarket.com/markets?conditionId=${cid}`);
+           const markets = await res.json();
+           const market = markets?.[0];
+
+           if (!market || !market.closed) return;
+
+           const outcomes = JSON.parse(market.outcomes);
+           winningOutcome = outcomes[market.winningOutcomeIndex];
+           if (!winningOutcome) return;
+
+           // 3. Update Cache
+           await supabase.from("market_resolution").upsert({
+             market_id: cid,
+             winning_outcome: winningOutcome,
+             is_resolved: true,
+             closed_at: market.closedTime,
+             updated_at: new Date().toISOString()
+           });
+        }
+
+        // 4. Update trades for this market (Bulk)
+        await supabase.rpc('resolve_trades_for_market', { m_id: cid, w_outcome: winningOutcome });
+
+      } catch (err) {
+        console.error(`[Pipeline] Resolution failed for ${cid}: ${err.message}`);
+      }
+    }));
+  }
+}
+
