@@ -20,8 +20,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy_key"
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://fndwcckgsihrrmpvnyxd.supabase.co",
+    "sb_publishable_WB7QOKNRUtixfnXtEgGcdA_jn50L-Mn"
   );
 
   try {
