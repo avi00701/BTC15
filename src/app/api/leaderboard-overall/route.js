@@ -16,12 +16,14 @@ function checkRateLimit(ip) {
   rateLimit[ip].push(now);
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy_key"
+  );
+
   try {
     // Basic IP extraction for Next.js App Router (may be forwarded by Vercel)
     const ip = request.headers.get("x-forwarded-for") || "unknown";
