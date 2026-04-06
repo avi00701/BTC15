@@ -1,11 +1,38 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Rate limiting middleware
+const rateLimit = {};
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  if (!rateLimit[ip]) rateLimit[ip] = [];
+  
+  rateLimit[ip] = rateLimit[ip].filter(t => now - t < 60000);
+
+  if (rateLimit[ip].length > 30) {
+    throw new Error("Too many requests");
+  }
+
+  rateLimit[ip].push(now);
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
 export async function GET(request) {
+  try {
+    // Basic IP extraction for Next.js App Router (may be forwarded by Vercel)
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    checkRateLimit(ip);
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), { 
+      status: 429,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "btc_15m";
 
